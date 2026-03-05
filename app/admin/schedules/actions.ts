@@ -9,7 +9,8 @@ export async function addSchedule(formData: FormData) {
   const start_time = formData.get("start_time") as string;
   const end_time = formData.get("end_time") as string;
 
-  await prisma.schedules.create({
+  // PERBAIKAN: Ganti 'schedules' menjadi 'schedule'
+  await prisma.schedule.create({
     data: {
       program_name,
       day,
@@ -19,11 +20,12 @@ export async function addSchedule(formData: FormData) {
   });
 
   revalidatePath("/admin/schedules");
-  revalidatePath("/"); // Agar jadwal di homepage juga terupdate
+  revalidatePath("/"); 
 }
 
 export async function deleteSchedule(id: string) {
-  await prisma.schedules.delete({
+  // PERBAIKAN: Ganti 'schedules' menjadi 'schedule'
+  await prisma.schedule.delete({
     where: { id },
   });
   revalidatePath("/admin/schedules");
