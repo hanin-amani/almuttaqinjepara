@@ -7,6 +7,7 @@
   --color-emerald-50: #ecfdf5;
   --color-emerald-100: #d1fae5;
   --color-emerald-600: #059669;
+  --color-emerald-950: #022c22;
 }
 
 @theme inline {
@@ -30,14 +31,14 @@ body {
   @apply antialiased;
 }
 
-/* --- REVISI LAYER COMPONENTS UNTUK TAILWIND V4 --- */
+/* --- REVISI LAYER COMPONENTS UNTUK TAILWIND V4 & FIX QUILL --- */
 @layer components {
   /* Container Utama Editor agar membulat */
   .quill {
-    @apply border-none bg-gray-50 rounded-[2rem] overflow-hidden transition-all duration-300;
+    @apply border-none bg-gray-50 rounded-[2rem] overflow-hidden transition-all duration-300 relative z-0;
   }
 
-  /* Toolbar Editor: Tanda ! ditaruh di depan setiap class */
+  /* Toolbar Editor: Menghilangkan border dan memberikan warna Emerald */
   .ql-toolbar.ql-snow {
     @apply !border-none !bg-emerald-50/80 !px-6 !py-4 !border-b !border-emerald-100;
     border-radius: 2rem 2rem 0 0;
@@ -45,18 +46,26 @@ body {
 
   /* Area Ketik (Editor Container) */
   .ql-container.ql-snow {
-    @apply !border-none !font-sans !text-sm !text-gray-800;
+    @apply !border-none !font-sans !text-base !text-gray-800;
     min-height: 250px;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* Pengaturan Teks di dalam Editor */
+  /* Pengaturan Teks di dalam Editor - INI BAGIAN KRUSIAL AGAR BISA DIKETIK */
   .ql-editor {
-    @apply !p-8 !leading-relaxed !min-h-[250px];
+    @apply !p-8 !leading-relaxed !min-h-[250px] outline-none;
+    /* Memastikan area dapat menerima input */
+    pointer-events: auto !important;
+    cursor: text !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
   }
 
   /* Placeholder Text */
   .ql-editor.ql-blank::before {
-    @apply !text-gray-400 !italic !left-8;
+    @apply !text-gray-400 !not-italic !left-8 !font-medium;
+    content: attr(data-placeholder);
   }
 
   /* Interaksi Tombol Toolbar (Hover & Active) */
@@ -79,11 +88,22 @@ body {
 
   /* Efek Fokus (Glow Emerald) saat mulai mengetik */
   .quill:focus-within {
-    @apply !ring-4 !ring-emerald-100/50 !bg-white !shadow-xl !shadow-emerald-50/20;
+    @apply !ring-4 !ring-emerald-100/50 !bg-white !shadow-2xl !shadow-emerald-900/5;
   }
   
-  /* Reset border default Quill menggunakan CSS murni agar lebih aman */
-  .ql-snow, .ql-container.ql-snow, .ql-toolbar.ql-snow {
+  /* Reset border default Quill secara total */
+  .ql-snow, 
+  .ql-container.ql-snow, 
+  .ql-toolbar.ql-snow {
     border: none !important;
+  }
+
+  /* Styling khusus untuk Heading di dalam Editor */
+  .ql-editor h2, .ql-editor h3 {
+    @apply !font-black !text-emerald-950 !mb-4 !mt-2 !uppercase !italic;
+  }
+
+  .ql-editor p {
+    @apply !mb-4;
   }
 }
