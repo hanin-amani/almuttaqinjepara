@@ -1,10 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 
-// Mencegah instansiasi ganda PrismaClient saat development (Next.js Hot Reload)
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+declare global {
+  var prisma: PrismaClient | undefined;
+}
 
 export const prisma =
-  globalForPrisma.prisma ||
+  global.prisma ??
   new PrismaClient({
     log:
       process.env.NODE_ENV === "development"
@@ -13,8 +14,7 @@ export const prisma =
   });
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  global.prisma = prisma;
 }
 
-// INI KUNCINYA: Menambahkan default export agar import di page.tsx tidak error
 export default prisma;

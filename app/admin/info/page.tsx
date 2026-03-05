@@ -1,4 +1,4 @@
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { deleteInfo } from "./actions";
 import InfoForm from "./InfoForm";
 import SearchInfo from "./SearchInfo";
@@ -6,146 +6,198 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function InfoPage({
-  searchParams,
-}: {
-  searchParams?: { q?: string; page?: string };
-}) {
+type Props = {
+  searchParams?: {
+    q?: string;
+    page?: string;
+  };
+};
+
+export default async function InfoPage({ searchParams }: Props) {
   const query = searchParams?.q || "";
-  const currentPage = Number(searchParams?.page) || 1;
+  const currentPage = Number(searchParams?.page || 1);
+
   const pageSize = 6;
   const skip = (currentPage - 1) * pageSize;
 
-  const [allInfo, totalCount] = await Promise.all([
-    prisma.info.findMany({
-      where: {
-        OR: [
-          { title: { contains: query, mode: "insensitive" } },
-          { content: { contains: query, mode: "insensitive" } },
-        ],
-      },
-      orderBy: { created_at: "desc" },
-      take: pageSize,
-      skip: skip,
-    }),
-    prisma.info.count({
-      where: {
-        OR: [
-          { title: { contains: query, mode: "insensitive" } },
-          { content: { contains: query, mode: "insensitive" } },
-        ],
-      },
-    }),
-  ]);
+  try {
+    const [allInfo, totalCount] = await Promise.all([
+      prisma.info.findMany({
+        where: {
+          OR: [
+            {
+              title: {
+                contains: query,
+                mode: "insensitive",
+              },
+            },
+            {
+              content: {
+                contains: query,
+                mode: "insensitive",
+              },
+            },
+          ],
+        },
+        orderBy: {
+          created_at: "desc",
+        },
+        take: pageSize,
+        skip: skip,
+      }),
 
-  const totalPages = Math.ceil(totalCount / pageSize);
+      prisma.info.count({
+        where: {
+          OR: [
+            {
+              title: {
+                contains: query,
+                mode: "insensitive",
+              },
+            },
+            {
+              content: {
+                contains: query,
+                mode: "insensitive",
+              },
+            },
+          ],
+        },
+      }),
+    ]);
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-10">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-black text-emerald-900 mb-10 uppercase italic tracking-tighter">
-          Portal Berita & Artikel 📰
-        </h1>
+    const totalPages = Math.ceil(totalCount / pageSize);
 
-        {/* FORM TAMBAH BERITA */}
-        <InfoForm />
+    return (
+      <div className="min-h-screen bg-gray-50 p-6 md:p-10">
+        <div className="max-w-7xl mx-auto">
 
-        <hr className="my-12 border-emerald-100" />
+          <h1 className="text-4xl font-black text-emerald-900 mb-10 uppercase italic tracking-tighter">
+            Portal Berita & Artikel 📰
+          </h1>
 
-        {/* SEARCH */}
-        <SearchInfo />
+          {/* FORM TAMBAH */}
+          <InfoForm />
 
-        {/* LIST BERITA */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-          {allInfo.map((info) => (
-            <div
-              key={info.id}
-              className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col group hover:border-emerald-300 transition-all"
-            >
-              {info.thumbnail && (
-                <div className="w-full h-56 relative overflow-hidden">
-                  <img
-                    src={info.thumbnail}
-                    alt={info.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
-                </div>
-              )}
+          <hr className="my-12 border-emerald-100" />
 
-              <div className="p-8 flex-1 flex flex-col text-left">
-                <h3 className="text-2xl font-black text-gray-900 mb-3 leading-tight uppercase italic">
-                  {info.title}
-                </h3>
+          {/* SEARCH */}
+          <SearchInfo />
 
-                <div className="mt-auto flex justify-between items-center pt-6 border-t border-gray-50">
-                  <div className="flex gap-2">
+          {/* LIST BERITA */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
 
-                    {/* EDIT */}
-                    <Link
-                      href={`/admin/info/${info.id}/edit`}
-                      className="px-4 py-2 bg-blue-50 text-blue-500 rounded-xl text-[10px] font-black uppercase hover:bg-blue-500 hover:text-white transition-all"
-                    >
-                      ✏️ Edit
-                    </Link>
+            {allInfo.map((info) => (
+              <div
+                key={info.id}
+                className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col group hover:border-emerald-300 transition-all"
+              >
 
-                    {/* DELETE */}
-                    <form action={deleteInfo}>
-                      <input type="hidden" name="id" value={info.id} />
+                {info.thumbnail && (
+                  <div className="w-full h-56 relative overflow-hidden">
+                    <img
+                      src={info.thumbnail}
+                      alt={info.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  </div>
+                )}
 
-                      <button
-                        type="submit"
-                        onClick={(e) => {
-                          if (!confirm("Yakin ingin menghapus berita ini?"))
-                            e.preventDefault();
-                        }}
-                        className="px-4 py-2 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase hover:bg-red-500 hover:text-white transition-all"
+                <div className="p-8 flex-1 flex flex-col text-left">
+
+                  <h3 className="text-2xl font-black text-gray-900 mb-3 leading-tight uppercase italic">
+                    {info.title}
+                  </h3>
+
+                  <div className="mt-auto flex justify-between items-center pt-6 border-t border-gray-50">
+
+                    <div className="flex gap-2">
+
+                      {/* EDIT */}
+                      <Link
+                        href={`/admin/info/${info.id}/edit`}
+                        className="px-4 py-2 bg-blue-50 text-blue-500 rounded-xl text-[10px] font-black uppercase hover:bg-blue-500 hover:text-white transition-all"
                       >
-                        🗑️ Hapus
-                      </button>
-                    </form>
+                        ✏️ Edit
+                      </Link>
+
+                      {/* DELETE */}
+                      <form action={deleteInfo}>
+                        <input type="hidden" name="id" value={info.id} />
+
+                        <button
+                          type="submit"
+                          onClick={(e) => {
+                            if (!confirm("Yakin ingin menghapus berita ini?")) {
+                              e.preventDefault();
+                            }
+                          }}
+                          className="px-4 py-2 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase hover:bg-red-500 hover:text-white transition-all"
+                        >
+                          🗑️ Hapus
+                        </button>
+                      </form>
+
+                    </div>
 
                   </div>
                 </div>
               </div>
+            ))}
+
+          </div>
+
+          {/* PAGINATION */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-10">
+
+              {currentPage > 1 && (
+                <Link
+                  href={`/admin/info?page=${currentPage - 1}${query ? `&q=${query}` : ""}`}
+                  className="px-6 py-3 bg-white border border-emerald-100 rounded-xl text-emerald-600 font-black text-[10px] uppercase hover:bg-emerald-600 hover:text-white transition-all"
+                >
+                  ← Prev
+                </Link>
+              )}
+
+              <span className="text-[10px] font-black text-emerald-900 uppercase tracking-widest">
+                Halaman {currentPage} dari {totalPages}
+              </span>
+
+              {currentPage < totalPages && (
+                <Link
+                  href={`/admin/info?page=${currentPage + 1}${query ? `&q=${query}` : ""}`}
+                  className="px-6 py-3 bg-white border border-emerald-100 rounded-xl text-emerald-600 font-black text-[10px] uppercase hover:bg-emerald-600 hover:text-white transition-all"
+                >
+                  Next →
+                </Link>
+              )}
+
             </div>
-          ))}
+          )}
+
+          {allInfo.length === 0 && (
+            <div className="text-center py-20 bg-white rounded-[3rem] border border-dashed border-gray-200">
+              <p className="text-gray-400 font-bold uppercase tracking-widest text-sm">
+                Tidak ada berita ditemukan
+              </p>
+            </div>
+          )}
+
         </div>
-
-        {/* PAGINATION */}
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-4 mt-10">
-            {currentPage > 1 && (
-              <Link
-                href={`/admin/info?page=${currentPage - 1}${query ? `&q=${query}` : ""}`}
-                className="px-6 py-3 bg-white border border-emerald-100 rounded-xl text-emerald-600 font-black text-[10px] uppercase hover:bg-emerald-600 hover:text-white transition-all"
-              >
-                ← Prev
-              </Link>
-            )}
-
-            <span className="text-[10px] font-black text-emerald-900 uppercase tracking-widest">
-              Halaman {currentPage} dari {totalPages}
-            </span>
-
-            {currentPage < totalPages && (
-              <Link
-                href={`/admin/info?page=${currentPage + 1}${query ? `&q=${query}` : ""}`}
-                className="px-6 py-3 bg-white border border-emerald-100 rounded-xl text-emerald-600 font-black text-[10px] uppercase hover:bg-emerald-600 hover:text-white transition-all"
-              >
-                Next →
-              </Link>
-            )}
-          </div>
-        )}
-
-        {allInfo.length === 0 && (
-          <div className="text-center py-20 bg-white rounded-[3rem] border border-dashed border-gray-200">
-            <p className="text-gray-400 font-bold uppercase tracking-widest text-sm">
-              Tidak ada berita ditemukan
-            </p>
-          </div>
-        )}
       </div>
-    </div>
-  );
+    );
+
+  } catch (error) {
+
+    console.error("PRISMA ERROR:", error);
+
+    return (
+      <div className="p-10">
+        <h1 className="text-red-600 font-bold text-xl">
+          Terjadi error saat mengambil data
+        </h1>
+      </div>
+    );
+  }
 }
