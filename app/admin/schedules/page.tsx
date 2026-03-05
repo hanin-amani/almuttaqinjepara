@@ -2,7 +2,8 @@ import prisma from "@/lib/prisma";
 import { addSchedule, deleteSchedule } from "./actions";
 
 export default async function SchedulesPage() {
-  const schedules = await prisma.schedules.findMany({
+  // PERBAIKAN: Ganti 'schedules' menjadi 'schedule' sesuai model Prisma
+  const schedules = await prisma.schedule.findMany({
     orderBy: [
       { day: 'asc' },
       { start_time: 'asc' }
@@ -12,7 +13,7 @@ export default async function SchedulesPage() {
   const days = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Ahad"];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-10">
+    <div className="min-h-screen bg-gray-50 p-6 md:p-10 text-left">
       <div className="max-w-5xl mx-auto">
         <header className="mb-10 text-center">
           <h1 className="text-3xl font-bold text-emerald-900">Atur Jadwal Siaran ⏰</h1>
@@ -46,7 +47,7 @@ export default async function SchedulesPage() {
               </div>
             </div>
             <div className="flex items-end">
-              <button type="submit" className="w-full py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100">
+              <button type="submit" className="w-full py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 active:scale-95">
                 Simpan Jadwal
               </button>
             </div>
@@ -74,9 +75,17 @@ export default async function SchedulesPage() {
                     </span>
                   </td>
                   <td className="p-5 font-medium text-gray-800">{item.program_name}</td>
-                  <td className="p-5">
-                    <form action={deleteSchedule.bind(null, item.id)} className="flex justify-center">
-                      <button className="text-gray-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50">
+                  <td className="p-5 text-center">
+                    {/* PERBAIKAN: Gunakan inline async function untuk membungkus deleteSchedule agar type-safe */}
+                    <form action={async () => {
+                      "use server";
+                      await deleteSchedule(item.id);
+                    }} className="flex justify-center">
+                      <button 
+                        type="submit"
+                        onClick={(e) => { if(!confirm("Hapus jadwal ini?")) e.preventDefault(); }}
+                        className="text-gray-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50"
+                      >
                         🗑️
                       </button>
                     </form>
