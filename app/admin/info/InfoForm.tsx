@@ -1,4 +1,4 @@
-"use client";
+"use client";  // Bismillah update
 
 import { useState } from "react";
 // Hapus baris createBrowserClient @supabase/ssr di sini!
