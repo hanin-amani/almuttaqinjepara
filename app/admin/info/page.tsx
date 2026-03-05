@@ -11,10 +11,9 @@ export default async function InfoPage({
 }) {
   const query = searchParams?.q || "";
   const currentPage = Number(searchParams?.page) || 1;
-  const pageSize = 6; // Jumlah berita per halaman
+  const pageSize = 6; 
   const skip = (currentPage - 1) * pageSize;
 
-  // 1. Ambil data dengan filter pencarian dan limitasi halaman
   const [allInfo, totalCount] = await Promise.all([
     prisma.info.findMany({
       where: {
@@ -50,7 +49,6 @@ export default async function InfoPage({
         <hr className="my-12 border-emerald-100" />
         <SearchInfo />
 
-        {/* DAFTAR BERITA */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
           {allInfo.map((info) => (
             <div key={info.id} className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col group hover:border-emerald-300 transition-all">
@@ -64,8 +62,19 @@ export default async function InfoPage({
                 <div className="mt-auto flex justify-between items-center pt-6 border-t border-gray-50">
                   <div className="flex gap-2">
                     <Link href={`/admin/info/${info.id}/edit`} className="px-4 py-2 bg-blue-50 text-blue-500 rounded-xl text-[10px] font-black uppercase hover:bg-blue-500 hover:text-white transition-all">✏️ Edit</Link>
-                    <form action={deleteInfo.bind(null, info.id)}>
-                      <button type="submit" className="px-4 py-2 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase hover:bg-red-500 hover:text-white transition-all">🗑️ Hapus</button>
+                    
+                    {/* PERBAIKAN DI SINI: Gunakan inline async function untuk membungkus deleteInfo */}
+                    <form action={async () => {
+                      "use server"; 
+                      await deleteInfo(info.id);
+                    }}>
+                      <button 
+                        type="submit" 
+                        onClick={(e) => { if(!confirm("Yakin hapus?")) e.preventDefault(); }}
+                        className="px-4 py-2 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase hover:bg-red-500 hover:text-white transition-all"
+                      >
+                        🗑️ Hapus
+                      </button>
                     </form>
                   </div>
                 </div>
@@ -74,7 +83,6 @@ export default async function InfoPage({
           ))}
         </div>
 
-        {/* KOMPONEN PAGINATION */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-4 mt-10">
             {currentPage > 1 && (
