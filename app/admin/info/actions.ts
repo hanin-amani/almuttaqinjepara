@@ -70,9 +70,8 @@ export async function addInfo(formData: FormData) {
 /* ================================
    UPDATE BERITA
 ================================ */
-export async function updateInfo(formData: FormData) {
+export async function updateInfo(id: string, formData: FormData) {
   try {
-    const id = formData.get("id") as string;
     const title = (formData.get("title") as string)?.trim();
     const content = (formData.get("content") as string)?.trim();
     const category = (formData.get("category") as string)?.trim();
@@ -83,7 +82,11 @@ export async function updateInfo(formData: FormData) {
       return { success: false, error: "Data tidak lengkap." };
     }
 
-    const slug = generateSlug(title);
+    const slug = title
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-");
 
     await prisma.info.update({
       where: { id },
@@ -94,16 +97,16 @@ export async function updateInfo(formData: FormData) {
         category,
         thumbnail,
         status,
-        excerpt: generateExcerpt(content),
+        excerpt: content.replace(/<[^>]*>?/gm, "").substring(0, 150) + "...",
       },
     });
 
     revalidatePath("/admin/info");
     revalidatePath("/info");
     revalidatePath("/");
-    revalidatePath(`/info/${slug}`);
 
     return { success: true };
+
   } catch (error) {
     console.error("Gagal update berita:", error);
     return { success: false, error: "Gagal memperbarui informasi." };
