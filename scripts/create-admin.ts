@@ -9,7 +9,8 @@ async function main() {
 
   const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-  const user = await prisma.user.create({
+  // PERBAIKAN: Ganti 'user' menjadi 'users' sesuai nama model di schema.prisma
+  const user = await prisma.users.create({
     data: {
       email,
       password: hashedPassword,
@@ -25,6 +26,7 @@ async function main() {
 main()
   .catch((e) => {
     console.error(e);
+    process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
