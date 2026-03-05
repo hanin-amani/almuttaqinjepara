@@ -3,39 +3,63 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-/**
- * Fungsi untuk menambah berita baru (Murni Prisma)
- */
-export async function addInfo(formData: FormData) {
-  const title = formData.get("title") as string;
-  const content = formData.get("content") as string;
-  const category = formData.get("category") as string;
-  const thumbnail = formData.get("thumbnail") as string; // Sekarang simpan URL string saja
-  const status = (formData.get("status") as string) || "published";
-
-  const slug = title
+/* ================================
+   Helper: Generate Slug
+================================ */
+function generateSlug(title: string) {
+  const baseSlug = title
     .toLowerCase()
-    .replace(/[^\w ]+/g, '')
-    .replace(/ +/g, '-') + "-" + Math.random().toString(36).substring(7);
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-");
 
+  const random = Math.random().toString(36).substring(2, 6);
+
+  return `${baseSlug}-${random}`;
+}
+
+/* ================================
+   Helper: Generate Excerpt
+================================ */
+function generateExcerpt(content: string) {
+  const plain = content.replace(/<[^>]*>?/gm, "");
+  return plain.substring(0, 150) + (plain.length > 150 ? "..." : "");
+}
+
+/* ================================
+   TAMBAH BERITA
+================================ */
+export async function addInfo(formData: FormData) {
   try {
+    const title = (formData.get("title") as string)?.trim();
+    const content = (formData.get("content") as string)?.trim();
+    const category = (formData.get("category") as string)?.trim();
+    const thumbnail = (formData.get("thumbnail") as string) || "";
+    const status = (formData.get("status") as string) || "published";
+
+    if (!title || !content) {
+      return { success: false, error: "Judul dan konten wajib diisi." };
+    }
+
+    const slug = generateSlug(title);
+
     await prisma.info.create({
-      data: { 
-        title, 
-        slug, 
-        content, 
-        category, 
+      data: {
+        title,
+        slug,
+        content,
+        category,
         thumbnail,
         status,
         is_active: true,
-        excerpt: content.replace(/<[^>]*>?/gm, '').substring(0, 150) + "..." 
-      }
+        excerpt: generateExcerpt(content),
+      },
     });
 
     revalidatePath("/admin/info");
     revalidatePath("/info");
     revalidatePath("/");
-    
+
     return { success: true };
   } catch (error) {
     console.error("Gagal menambah berita:", error);
@@ -43,19 +67,24 @@ export async function addInfo(formData: FormData) {
   }
 }
 
-/**
- * Fungsi Update berita (Tanpa Hapus File Supabase)
- */
-export async function updateInfo(id: string, formData: FormData) {
-  const title = formData.get("title") as string;
-  const content = formData.get("content") as string;
-  const category = formData.get("category") as string;
-  const thumbnail = formData.get("thumbnail") as string;
-  const status = (formData.get("status") as string) || "published";
-
-  const slug = title.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-');
-
+/* ================================
+   UPDATE BERITA
+================================ */
+export async function updateInfo(formData: FormData) {
   try {
+    const id = formData.get("id") as string;
+    const title = (formData.get("title") as string)?.trim();
+    const content = (formData.get("content") as string)?.trim();
+    const category = (formData.get("category") as string)?.trim();
+    const thumbnail = (formData.get("thumbnail") as string) || "";
+    const status = (formData.get("status") as string) || "published";
+
+    if (!id || !title || !content) {
+      return { success: false, error: "Data tidak lengkap." };
+    }
+
+    const slug = generateSlug(title);
+
     await prisma.info.update({
       where: { id },
       data: {
@@ -63,16 +92,17 @@ export async function updateInfo(id: string, formData: FormData) {
         slug,
         content,
         category,
-        status,
         thumbnail,
-        excerpt: content.replace(/<[^>]*>?/gm, '').substring(0, 150) + "..."
-      }
+        status,
+        excerpt: generateExcerpt(content),
+      },
     });
 
     revalidatePath("/admin/info");
     revalidatePath("/info");
     revalidatePath("/");
-    
+    revalidatePath(`/info/${slug}`);
+
     return { success: true };
   } catch (error) {
     console.error("Gagal update berita:", error);
@@ -80,19 +110,25 @@ export async function updateInfo(id: string, formData: FormData) {
   }
 }
 
-/**
- * Fungsi hapus berita (Murni Database)
- */
-export async function deleteInfo(id: string) {
+/* ================================
+   HAPUS BERITA
+================================ */
+export async function deleteInfo(formData: FormData) {
   try {
+    const id = formData.get("id") as string;
+
+    if (!id) {
+      return { success: false, error: "ID tidak ditemukan." };
+    }
+
     await prisma.info.delete({
-      where: { id }
+      where: { id },
     });
 
     revalidatePath("/admin/info");
     revalidatePath("/info");
     revalidatePath("/");
-    
+
     return { success: true };
   } catch (error) {
     console.error("Gagal menghapus berita:", error);
