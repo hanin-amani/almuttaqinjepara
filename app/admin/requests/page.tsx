@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import { approveRequest } from "./actions";
-import DeleteButton from "./DeleteButton"; // Impor komponen client tadi
+import DeleteButton from "./DeleteButton"; 
 
 export default async function RequestsPage() {
   const requests = await prisma.songRequest.findMany({
@@ -10,7 +10,7 @@ export default async function RequestsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-10">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-10">
+        <div className="mb-10 text-left">
           <h1 className="text-3xl font-black text-emerald-900 uppercase italic tracking-tighter">
             Daftar Request Lagu 📩
           </h1>
@@ -48,9 +48,12 @@ export default async function RequestsPage() {
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center justify-center gap-3">
-                        {/* Tombol Putar tetap aman di Server Component karena pakai Form Action */}
                         {req.status !== 'completed' && (
-                          <form action={approveRequest.bind(null, req.id)}>
+                          /* PERBAIKAN: Bungkus dengan inline async function daripada .bind() */
+                          <form action={async () => {
+                            "use server";
+                            await approveRequest(req.id);
+                          }}>
                             <button 
                               type="submit"
                               className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-all active:scale-95"
@@ -60,7 +63,7 @@ export default async function RequestsPage() {
                           </form>
                         )}
                         
-                        {/* PANGGIL KOMPONEN CLIENT DI SINI */}
+                        {/* Komponen Client untuk Hapus */}
                         <DeleteButton id={req.id} />
                       </div>
                     </td>
