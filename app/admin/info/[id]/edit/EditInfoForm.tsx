@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateInfo } from "../../actions"; // Pastikan path ke actions benar
+import { updateInfo } from "../../actions"; 
 import RichTextEditor from "../../RichTextEditor";
 
 interface InfoData {
@@ -17,13 +17,12 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
   const [imageUrl, setImageUrl] = useState(data.thumbnail || "");
   const [loading, setLoading] = useState(false);
 
-  // Fungsi perantara untuk menangani update tanpa bikin TypeScript marah
   async function handleUpdate(formData: FormData) {
     setLoading(true);
     try {
-      // Tambahkan ID ke formData karena ini proses edit
-      formData.append("id", data.id);
-      const result = await updateInfo(formData);
+      // PERBAIKAN DI SINI:
+      // Kita panggil updateInfo dengan 2 argumen: (id, formData)
+      const result = await updateInfo(data.id, formData);
       
       if (result.success) {
         alert("Data berhasil diperbarui! 📝");
