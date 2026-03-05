@@ -31,49 +31,65 @@ body {
   @apply antialiased;
 }
 
-/* --- REVISI LAYER COMPONENTS UNTUK TAILWIND V4 & FIX QUILL --- */
+/* --- REVISI MODERN: STICKY TOOLBAR & FIXED SCROLL AREA --- */
 @layer components {
-  /* Container Utama Editor agar membulat */
+  /* Container Utama Editor */
   .quill {
-    @apply border-none bg-gray-50 rounded-[2rem] overflow-hidden transition-all duration-300 relative z-0;
+    @apply border-none bg-gray-50 rounded-[2rem] overflow-hidden transition-all duration-500 relative z-0 flex flex-col;
+    /* Memberikan batas tinggi agar tidak meninggi terus menerus */
+    max-height: 600px; 
+    border: 1px solid var(--color-emerald-100) !important;
   }
 
-  /* Toolbar Editor: Menghilangkan border dan memberikan warna Emerald */
+  /* Toolbar Editor: Dibuat STICKY agar tidak hilang saat scroll */
   .ql-toolbar.ql-snow {
-    @apply !border-none !bg-emerald-50/80 !px-6 !py-4 !border-b !border-emerald-100;
+    @apply !border-none !bg-emerald-50/95 !px-6 !py-4 !border-b !border-emerald-100 sticky top-0 z-10 backdrop-blur-md;
     border-radius: 2rem 2rem 0 0;
   }
 
-  /* Area Ketik (Editor Container) */
+  /* Area Container Quill */
   .ql-container.ql-snow {
-    @apply !border-none !font-sans !text-base !text-gray-800;
-    min-height: 250px;
-    display: flex;
-    flex-direction: column;
+    @apply !border-none !font-sans !text-base !text-gray-800 flex-1 overflow-hidden;
+    /* Flex-1 memastikan area ketik mengambil sisa ruang yang tersedia */
   }
 
-  /* Pengaturan Teks di dalam Editor - INI BAGIAN KRUSIAL AGAR BISA DIKETIK */
+  /* Area Ketik (Scrollable Area) */
   .ql-editor {
-    @apply !p-8 !leading-relaxed !min-h-[250px] outline-none;
-    /* Memastikan area dapat menerima input */
+    @apply !p-8 !leading-relaxed outline-none;
+    /* Mengaktifkan scroll internal agar editor tidak memanjang keluar layar */
+    overflow-y: auto !important;
+    height: 100%;
+    min-height: 300px;
+    max-height: 500px;
+    
+    /* UX Keamanan & Kenyamanan */
     pointer-events: auto !important;
     cursor: text !important;
     user-select: text !important;
     -webkit-user-select: text !important;
   }
 
+  /* Custom Scrollbar Emerald agar senada dengan tema Pondok */
+  .ql-editor::-webkit-scrollbar {
+    width: 6px;
+  }
+  .ql-editor::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  .ql-editor::-webkit-scrollbar-thumb {
+    @apply bg-emerald-200 rounded-full hover:bg-emerald-400 transition-colors;
+  }
+
   /* Placeholder Text */
   .ql-editor.ql-blank::before {
-    @apply !text-gray-400 !not-italic !left-8 !font-medium;
+    @apply !text-gray-400 !not-italic !left-8 !font-medium opacity-60;
     content: attr(data-placeholder);
   }
 
-  /* Interaksi Tombol Toolbar (Hover & Active) */
+  /* Interaksi Tombol Toolbar */
   .ql-snow.ql-toolbar button:hover,
-  .ql-snow .ql-toolbar button:hover,
-  .ql-snow.ql-toolbar button.ql-active,
-  .ql-snow .ql-toolbar button.ql-active {
-    @apply !text-emerald-600;
+  .ql-snow.ql-toolbar button.ql-active {
+    @apply !text-emerald-600 bg-white/50 rounded-md;
   }
 
   .ql-snow.ql-toolbar button:hover .ql-stroke,
@@ -81,29 +97,28 @@ body {
     @apply !stroke-emerald-600;
   }
 
-  .ql-snow.ql-toolbar button:hover .ql-fill,
-  .ql-snow.ql-toolbar button.ql-active .ql-fill {
-    @apply !fill-emerald-600;
-  }
-
-  /* Efek Fokus (Glow Emerald) saat mulai mengetik */
+  /* Efek Fokus (Glow Emerald) */
   .quill:focus-within {
-    @apply !ring-4 !ring-emerald-100/50 !bg-white !shadow-2xl !shadow-emerald-900/5;
+    @apply !ring-4 !ring-emerald-100/50 !bg-white !shadow-2xl !shadow-emerald-900/10;
+    border-color: var(--color-emerald-600) !important;
   }
   
-  /* Reset border default Quill secara total */
-  .ql-snow, 
-  .ql-container.ql-snow, 
-  .ql-toolbar.ql-snow {
+  /* Reset All Default Borders */
+  .ql-snow, .ql-container.ql-snow, .ql-toolbar.ql-snow {
     border: none !important;
   }
 
-  /* Styling khusus untuk Heading di dalam Editor */
+  /* Typography Modern di dalam Editor */
   .ql-editor h2, .ql-editor h3 {
-    @apply !font-black !text-emerald-950 !mb-4 !mt-2 !uppercase !italic;
+    @apply !font-black !text-emerald-950 !mb-4 !mt-4 !uppercase !italic !tracking-tight;
   }
 
   .ql-editor p {
-    @apply !mb-4;
+    @apply !mb-4 !text-gray-700;
+  }
+
+  /* List Styling */
+  .ql-editor ol, .ql-editor ul {
+    @apply !pl-4 !mb-4;
   }
 }
