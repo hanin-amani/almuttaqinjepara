@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import { addSchedule, deleteSchedule } from "./actions";
 
 export default async function SchedulesPage() {
-  // PERBAIKAN: Ganti 'schedules' menjadi 'schedule' sesuai model Prisma
+  // 1. Ambil data dengan model 'schedule' (tunggal)
   const schedules = await prisma.schedule.findMany({
     orderBy: [
       { day: 'asc' },
@@ -71,12 +71,12 @@ export default async function SchedulesPage() {
                   <td className="p-5 font-bold text-emerald-900">{item.day}</td>
                   <td className="p-5">
                     <span className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
-                      {item.start_time.slice(0, 5)} - {item.end_time.slice(0, 5)}
+                      {/* PERBAIKAN: Ubah Date ke String dulu baru di-slice */}
+                      {String(item.start_time).slice(0, 5)} - {String(item.end_time).slice(0, 5)}
                     </span>
                   </td>
                   <td className="p-5 font-medium text-gray-800">{item.program_name}</td>
                   <td className="p-5 text-center">
-                    {/* PERBAIKAN: Gunakan inline async function untuk membungkus deleteSchedule agar type-safe */}
                     <form action={async () => {
                       "use server";
                       await deleteSchedule(item.id);
