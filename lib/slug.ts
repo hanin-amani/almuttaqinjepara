@@ -1,10 +1,8 @@
 export function generateSlug(title: string): string {
-
   return title
     .toLowerCase()
-    .replace(/[^\w\s-]/g, "")     // hapus karakter aneh
-    .replace(/\s+/g, "-")         // spasi jadi -
-    .replace(/--+/g, "-")         // double - jadi single
-    .trim();
-
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
 }
