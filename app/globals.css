@@ -3,7 +3,6 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  /* Variabel Emerald untuk identitas pondok di Purwokerto */
   --color-emerald-50: #ecfdf5;
   --color-emerald-100: #d1fae5;
   --color-emerald-600: #059669;
@@ -17,13 +16,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -31,94 +23,67 @@ body {
   @apply antialiased;
 }
 
-/* --- REVISI MODERN: STICKY TOOLBAR & FIXED SCROLL AREA --- */
+/* --- FIX TOTAL: EDITOR ALA WORDPRESS (FIXED HEIGHT + SCROLL) --- */
 @layer components {
-  /* Container Utama Editor */
+  /* 1. Container Utama */
   .quill {
-    @apply border-none bg-gray-50 rounded-[2rem] overflow-hidden transition-all duration-500 relative z-0 flex flex-col;
-    /* Memberikan batas tinggi agar tidak meninggi terus menerus */
-    max-height: 600px; 
-    border: 1px solid var(--color-emerald-100) !important;
+    @apply border border-emerald-100 bg-gray-50 rounded-[1.5rem] overflow-hidden transition-all duration-300 relative flex flex-col;
+    /* Kita kunci tinggi maksimal containernya di sini */
+    height: 500px !important; 
   }
 
-  /* Toolbar Editor: Dibuat STICKY agar tidak hilang saat scroll */
+  /* 2. Toolbar Tetap di Atas (Sticky) */
   .ql-toolbar.ql-snow {
     @apply !border-none !bg-emerald-50/95 !px-6 !py-4 !border-b !border-emerald-100 sticky top-0 z-10 backdrop-blur-md;
-    border-radius: 2rem 2rem 0 0;
+    flex-shrink: 0; /* Toolbar tidak boleh mengecil */
   }
 
-  /* Area Container Quill */
+  /* 3. Container Editor */
   .ql-container.ql-snow {
     @apply !border-none !font-sans !text-base !text-gray-800 flex-1 overflow-hidden;
-    /* Flex-1 memastikan area ketik mengambil sisa ruang yang tersedia */
+    display: flex;
+    flex-direction: column;
   }
 
-  /* Area Ketik (Scrollable Area) */
+  /* 4. Area Ketik (Ini yang ada Scroll-nya) */
   .ql-editor {
-    @apply !p-8 !leading-relaxed outline-none;
-    /* Mengaktifkan scroll internal agar editor tidak memanjang keluar layar */
-    overflow-y: auto !important;
+    @apply !p-8 !leading-relaxed outline-none flex-1;
+    /* AKTIFKAN SCROLL DI SINI */
+    overflow-y: auto !important; 
     height: 100%;
-    min-height: 300px;
-    max-height: 500px;
     
-    /* UX Keamanan & Kenyamanan */
+    /* UX Keamanan agar kursor pasti muncul */
     pointer-events: auto !important;
     cursor: text !important;
     user-select: text !important;
-    -webkit-user-select: text !important;
   }
 
-  /* Custom Scrollbar Emerald agar senada dengan tema Pondok */
+  /* 5. Scrollbar Cantik ala Emerald */
   .ql-editor::-webkit-scrollbar {
     width: 6px;
   }
   .ql-editor::-webkit-scrollbar-track {
-    @apply bg-transparent;
+    background: transparent;
   }
   .ql-editor::-webkit-scrollbar-thumb {
-    @apply bg-emerald-200 rounded-full hover:bg-emerald-400 transition-colors;
+    @apply bg-emerald-200 rounded-full hover:bg-emerald-400;
   }
 
-  /* Placeholder Text */
+  /* Placeholder agar tidak menghalangi klik */
   .ql-editor.ql-blank::before {
     @apply !text-gray-400 !not-italic !left-8 !font-medium opacity-60;
     content: attr(data-placeholder);
+    pointer-events: none;
   }
 
-  /* Interaksi Tombol Toolbar */
-  .ql-snow.ql-toolbar button:hover,
-  .ql-snow.ql-toolbar button.ql-active {
-    @apply !text-emerald-600 bg-white/50 rounded-md;
-  }
-
-  .ql-snow.ql-toolbar button:hover .ql-stroke,
-  .ql-snow.ql-toolbar button.ql-active .ql-stroke {
-    @apply !stroke-emerald-600;
-  }
-
-  /* Efek Fokus (Glow Emerald) */
+  /* Efek Fokus */
   .quill:focus-within {
-    @apply !ring-4 !ring-emerald-100/50 !bg-white !shadow-2xl !shadow-emerald-900/10;
+    @apply !ring-4 !ring-emerald-100/50 !bg-white !shadow-xl;
     border-color: var(--color-emerald-600) !important;
   }
-  
-  /* Reset All Default Borders */
+
+  /* Hilangkan border bawaan Quill */
   .ql-snow, .ql-container.ql-snow, .ql-toolbar.ql-snow {
     border: none !important;
-  }
-
-  /* Typography Modern di dalam Editor */
-  .ql-editor h2, .ql-editor h3 {
-    @apply !font-black !text-emerald-950 !mb-4 !mt-4 !uppercase !italic !tracking-tight;
-  }
-
-  .ql-editor p {
-    @apply !mb-4 !text-gray-700;
-  }
-
-  /* List Styling */
-  .ql-editor ol, .ql-editor ul {
-    @apply !pl-4 !mb-4;
   }
 }
