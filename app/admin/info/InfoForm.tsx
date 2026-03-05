@@ -29,9 +29,9 @@ export default function InfoForm() {
         <label className="font-bold">Isi Artikel</label>
 
         <RichTextEditor
-          value={content}
-          onChange={setContent}
-        />
+  content={content}
+  onChange={setContent}
+/>
 
         <input type="hidden" name="content" value={content} />
       </div>

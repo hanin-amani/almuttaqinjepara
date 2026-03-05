@@ -42,27 +42,22 @@ model SongRequest {
 /////////////////////////////////////////////////////
 
 model Info {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title       String
-  slug        String   @unique
+  slug        String        @unique
   excerpt     String?
   content     String
   thumbnail   String?
-  status      String   @default("publish")
-  is_active   Boolean  @default(true)
+  status      String        @default("publish")
+  is_active   Boolean       @default(true)
+  category_id String?
+  author_id   String?
 
-  category_id String?  @db.Uuid
-  author_id   String?  @db.Uuid
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
 
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  category InfoCategory? @relation(fields: [category_id], references: [id])
-  author   Profile?      @relation("AuthorInfo", fields: [author_id], references: [id])
-
-  @@index([slug])
-  @@index([category_id])
-  @@index([author_id])
+  category    InfoCategory? @relation(fields: [category_id], references: [id])
+  author      Profile?      @relation(fields: [author_id], references: [id])
 
   @@map("infos")
   @@schema("public")

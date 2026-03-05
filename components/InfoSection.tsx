@@ -13,6 +13,9 @@ export default async function InfoSection() {
         is_active: true,
         status: "published",
       },
+      include: {
+        category: true, // TAMBAHKAN INI agar data kategori ikut terambil
+      },
       orderBy: {
         created_at: "desc",
       },
@@ -73,7 +76,8 @@ export default async function InfoSection() {
 
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 bg-white/90 backdrop-blur-md text-emerald-950 text-[9px] font-black uppercase tracking-widest rounded-lg shadow-sm border border-emerald-100">
-                      {info.category}
+                      {/* PERBAIKAN: Akses nama kategori melalui objek relasi */}
+                      {info.category?.name || "Umum"}
                     </span>
                   </div>
                 </div>

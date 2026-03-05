@@ -54,9 +54,9 @@ export default function CreateInfoForm() {
           </label>
 
           <RichTextEditor
-            value={content}
-            onChange={setContent}
-          />
+  content={content}
+  onChange={setContent}
+/>
 
           <input
             type="hidden"

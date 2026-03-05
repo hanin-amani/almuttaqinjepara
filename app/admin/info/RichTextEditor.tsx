@@ -5,34 +5,39 @@ import StarterKit from "@tiptap/starter-kit"
 import Image from "@tiptap/extension-image"
 import { useEffect } from "react"
 
-export default function RichTextEditor({
-  content,
-  onChange,
-}: {
+interface Props {
   content: string
   onChange: (content: string) => void
-}) {
+}
+
+export default function RichTextEditor({ content, onChange }: Props) {
 
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Image
+      Image,
     ],
 
-    content: content,
+    content,
 
     immediatelyRender: false,
 
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML())
+    onUpdate({ editor }) {
+      const html = editor.getHTML()
+      onChange(html)
     },
   })
 
-  useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content)
-    }
-  }, [content, editor])
+  // sinkronisasi jika content dari luar berubah
+ useEffect(() => {
+  if (!editor) return
+
+  const current = editor.getHTML()
+
+  if (content !== current) {
+    editor.commands.setContent(content)
+  }
+}, [content, editor])
 
   if (!editor) return null
 
@@ -100,8 +105,8 @@ export default function RichTextEditor({
 
       </div>
 
-      {/* EDITOR AREA */}
-      <div className="h-[350px] overflow-y-auto p-4">
+      {/* EDITOR */}
+      <div className="min-h-[350px] overflow-y-auto p-4">
 
         <EditorContent
           editor={editor}

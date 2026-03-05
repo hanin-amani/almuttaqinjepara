@@ -2,11 +2,14 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 
 export default async function PublicInfoPage() {
-  // 1. Mengambil informasi yang aktif dan sudah dipublish
+  // 1. Mengambil informasi yang aktif, dipublish, DAN menyertakan data kategorinya
   const infos = await prisma.info.findMany({
     where: { 
       is_active: true,
       status: "published" 
+    },
+    include: {
+      category: true, // WAJIB TAMBAHKAN INI agar data kategori bisa diakses
     },
     orderBy: { created_at: "desc" },
   });
@@ -28,7 +31,6 @@ export default async function PublicInfoPage() {
             Kumpulan berita dan pengumuman terbaru Radio Suara Al Muttaqin Purwokerto.
           </p>
         </div>
-        {/* Dekorasi Background Lembut */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-800 rounded-full -mr-32 -mt-32 opacity-20 blur-3xl"></div>
       </div>
 
@@ -41,7 +43,7 @@ export default async function PublicInfoPage() {
               href={`/info/${info.slug}`}
               className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:border-emerald-300 hover:shadow-xl transition-all duration-300"
             >
-              {/* Thumbnail Section - Slim Height (h-48) */}
+              {/* Thumbnail Section */}
               {info.thumbnail && (
                 <div className="w-full h-48 relative overflow-hidden">
                   <img 
@@ -54,8 +56,9 @@ export default async function PublicInfoPage() {
 
               <div className="p-6 flex-1 flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
+                  {/* PERBAIKAN: Menggunakan info.category.name dengan optional chaining */}
                   <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[9px] font-black uppercase tracking-widest">
-                    {info.category}
+                    {info.category?.name || "Umum"}
                   </span>
                   <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
                     {new Date(info.created_at).toLocaleDateString('id-ID', {
@@ -66,12 +69,12 @@ export default async function PublicInfoPage() {
                   </span>
                 </div>
 
-                {/* Judul Artikel - Maksimal 2 baris agar tetap slim */}
+                {/* Judul Artikel */}
                 <h2 className="text-lg font-black text-gray-900 mb-3 group-hover:text-emerald-700 transition-colors leading-tight uppercase italic tracking-tight line-clamp-2">
                   {info.title}
                 </h2>
                 
-                {/* Excerpt - Bersih dari HTML dan dibatasi 3 baris */}
+                {/* Excerpt */}
                 <p className="text-gray-500 text-xs leading-relaxed mb-6 line-clamp-3 font-medium">
                   {cleanText(info.content || "")}
                 </p>
@@ -91,7 +94,7 @@ export default async function PublicInfoPage() {
             <div className="col-span-full py-24 text-center bg-white rounded-2xl border border-dashed border-emerald-200">
               <div className="text-5xl mb-4">📜</div>
               <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">
-                Belum ada warta pondok yang diterbitkan, Aris.
+                Belum ada warta pondok yang diterbitkan.
               </p>
             </div>
           )}

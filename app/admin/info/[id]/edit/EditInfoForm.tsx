@@ -5,11 +5,18 @@ import { updateInfo } from "../../actions";
 import RichTextEditor from "../../RichTextEditor";
 
 interface InfoData {
-  id: string;
-  title: string;
-  content: string;
-  thumbnail?: string | null;
-  category: string;
+  id: string
+  title: string
+  slug: string
+  excerpt?: string | null
+  content: string
+  thumbnail?: string | null
+  status: string
+  is_active: boolean
+  category_id?: string | null
+  author_id?: string | null
+  created_at: Date
+  updated_at: Date
 }
 
 export default function EditInfoForm({ data }: { data: InfoData }) {
@@ -18,7 +25,7 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
   const [imageUrl, setImageUrl] = useState(data.thumbnail || "");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit() {
+  function handleSubmit() {
     setLoading(true);
   }
 
@@ -33,6 +40,9 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
 
         {/* ID */}
         <input type="hidden" name="id" value={data.id} />
+
+        {/* CONTENT HIDDEN */}
+        <input type="hidden" name="content" value={content} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
@@ -56,22 +66,24 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
             {/* CATEGORY + THUMBNAIL */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
+              {/* CATEGORY */}
               <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest text-left">
                   Kategori
                 </label>
 
-                <select
-                  name="category"
-                  defaultValue={data.category}
-                  className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50 outline-none font-bold appearance-none"
-                >
-                  <option value="Berita">📰 Berita Pondok</option>
-                  <option value="Kajian">🎙️ Artikel Kajian</option>
-                  <option value="Pengumuman">📢 Pengumuman</option>
-                </select>
+               <select
+  name="category"
+  defaultValue={data.category_id || ""}
+  className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50 outline-none font-bold appearance-none"
+>
+  <option value="Berita">📰 Berita Pondok</option>
+  <option value="Kajian">🎙️ Artikel Kajian</option>
+  <option value="Pengumuman">📢 Pengumuman</option>
+</select>
               </div>
 
+              {/* THUMBNAIL */}
               <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest text-left">
                   URL Thumbnail
@@ -87,6 +99,22 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
 
             </div>
 
+            {/* STATUS */}
+            <div>
+              <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest text-left">
+                Status
+              </label>
+
+              <select
+                name="status"
+                defaultValue={data.status || "publish"}
+                className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50 outline-none font-bold"
+              >
+                <option value="publish">Publish</option>
+                <option value="draft">Draft</option>
+              </select>
+            </div>
+
           </div>
 
           {/* EDITOR */}
@@ -96,12 +124,9 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
               Isi Berita
             </label>
 
-            <RichTextEditor value={content} onChange={setContent} />
-
-            <input
-              type="hidden"
-              name="content"
-              value={content}
+            <RichTextEditor
+              content={content}
+              onChange={setContent}
             />
 
           </div>
@@ -117,6 +142,7 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
         </button>
 
       </form>
+
     </div>
   );
 }

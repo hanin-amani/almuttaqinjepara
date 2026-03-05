@@ -1,21 +1,24 @@
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
-// Next.js 15+ mewajibkan params di-await karena tipenya sekarang adalah Promise
-export default async function InfoDetailPage({ 
-  params 
-}: { 
-  params: Promise<{ slug: string }> 
+// Next.js 15+ mewajibkan params di-await
+export default async function InfoDetailPage({
+  params
+}: {
+  params: Promise<{ slug: string }>
 }) {
-  // 1. Await params terlebih dahulu untuk mendapatkan slug
+  // 1. Await params terlebih dahulu
   const { slug } = await params;
 
-  // 2. Mencari berita berdasarkan slug yang unik
+  // 2. Mencari berita berdasarkan slug DAN menyertakan data kategori
   const info = await prisma.info.findUnique({
     where: { slug: slug },
+    include: {
+      category: true, // Pastikan relasi di schema.prisma bernama 'category'
+    },
   });
 
-  // 3. Jika data tidak ditemukan, lempar ke halaman 404
+  // 3. Jika data tidak ditemukan
   if (!info) {
     notFound();
   }
@@ -23,7 +26,7 @@ export default async function InfoDetailPage({
   return (
     <div className="min-h-screen bg-gray-50 py-16 px-6">
       <article className="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        {/* Gambar Utama (Slim & Sharp) */}
+        {/* Gambar Utama */}
         {info.thumbnail && (
           <div className="w-full h-72 relative">
             <img 
@@ -38,7 +41,8 @@ export default async function InfoDetailPage({
           {/* Metadata */}
           <div className="flex items-center gap-4 mb-6">
             <span className="px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-black uppercase tracking-widest">
-              {info.category}
+              {/* PERBAIKAN: Mengakses nama kategori dari objek relasi */}
+              {info.category?.name || "Umum"}
             </span>
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
               {new Date(info.created_at).toLocaleDateString('id-ID', {
@@ -54,7 +58,7 @@ export default async function InfoDetailPage({
             {info.title}
           </h1>
 
-          {/* Isi Artikel - Merender HTML dari RichTextEditor */}
+          {/* Isi Artikel */}
           <div 
             className="prose prose-emerald max-w-none text-gray-600 leading-relaxed font-medium"
             dangerouslySetInnerHTML={{ __html: info.content }}
