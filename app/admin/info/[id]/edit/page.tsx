@@ -12,10 +12,12 @@ export default async function EditInfoPage({ params }: { params: { id: string } 
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-10">
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-black text-emerald-900 mb-10 uppercase italic tracking-tighter">
+        <h1 className="text-3xl font-black text-emerald-900 mb-10 uppercase italic tracking-tighter text-left">
           Edit Artikel: {info.title} 📝
         </h1>
-        <EditInfoForm info={info} />
+        
+        {/* PERBAIKAN: Ganti 'info={info}' menjadi 'data={info}' */}
+        <EditInfoForm data={info} />
       </div>
     </div>
   );
