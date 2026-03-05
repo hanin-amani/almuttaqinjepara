@@ -116,25 +116,21 @@ export async function updateInfo(id: string, formData: FormData) {
 /* ================================
    HAPUS BERITA
 ================================ */
-export async function deleteInfo(formData: FormData) {
+export async function deleteInfo(formData: FormData): Promise<void> {
   try {
     const id = formData.get("id") as string;
 
-    if (!id) {
-      return { success: false, error: "ID tidak ditemukan." };
-    }
+    if (!id) return;
 
     await prisma.info.delete({
-      where: { id },
+      where: { id }
     });
 
     revalidatePath("/admin/info");
     revalidatePath("/info");
     revalidatePath("/");
 
-    return { success: true };
   } catch (error) {
     console.error("Gagal menghapus berita:", error);
-    return { success: false, error: "Gagal menghapus data." };
   }
 }
