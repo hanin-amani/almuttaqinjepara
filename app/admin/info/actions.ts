@@ -1,40 +1,111 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { generateSlug } from "@/lib/slug";
+
+/////////////////////////////////////////////////////
+// CREATE INFO
+/////////////////////////////////////////////////////
 
 export async function createInfo(formData: FormData) {
-  const title = formData.get("title") as string;
-  const content = formData.get("content") as string;
 
-  if (!title || !content) {
-    throw new Error("Judul dan konten wajib diisi");
+  try {
+
+    const title = formData.get("title") as string;
+    const content = formData.get("content") as string;
+    const category = formData.get("category") as string;
+    const thumbnail = formData.get("thumbnail") as string;
+    const status = formData.get("status") as string;
+
+    const slug = generateSlug(title);
+
+    await prisma.info.create({
+      data: {
+        title,
+        slug,
+        content,
+        thumbnail,
+        status,
+        category_id: category || null
+      }
+    });
+
+    return { success: true };
+
+  } catch (error) {
+
+    console.error(error);
+
+    return {
+      success: false,
+      error: "Gagal membuat artikel"
+    };
+
   }
 
-  const slug = title
-    .toLowerCase()
-    .replace(/ /g, "-")
-    .replace(/[^\w-]+/g, "");
-
-  await prisma.info.create({
-    data: {
-      title,
-      slug,
-      content,
-      status: "publish",
-      is_active: true,
-    },
-  });
-
-  revalidatePath("/admin/info");
 }
 
+/////////////////////////////////////////////////////
+// UPDATE INFO
+/////////////////////////////////////////////////////
+
+export async function updateInfo(id: string, formData: FormData) {
+
+  try {
+
+    const title = formData.get("title") as string;
+    const content = formData.get("content") as string;
+    const category = formData.get("category") as string;
+    const thumbnail = formData.get("thumbnail") as string;
+    const status = formData.get("status") as string;
+
+    const slug = generateSlug(title);
+
+    await prisma.info.update({
+      where: { id },
+      data: {
+        title,
+        slug,
+        content,
+        thumbnail,
+        status,
+        category_id: category || null
+      }
+    });
+
+    return { success: true };
+
+  } catch (error) {
+
+    console.error(error);
+
+    return {
+      success: false,
+      error: "Gagal update artikel"
+    };
+
+  }
+
+}
+
+/////////////////////////////////////////////////////
+// DELETE INFO
+/////////////////////////////////////////////////////
+
 export async function deleteInfo(formData: FormData) {
-  const id = formData.get("id") as string;
 
-  await prisma.info.delete({
-    where: { id },
-  });
+  try {
 
-  revalidatePath("/admin/info");
+    const id = formData.get("id") as string;
+
+    await prisma.info.delete({
+      where: { id }
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+  }
+
 }
