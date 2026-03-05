@@ -9,8 +9,9 @@ async function main() {
 
   const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-  // PERBAIKAN: Ganti 'user' menjadi 'users' sesuai nama model di schema.prisma
-  const user = await prisma.users.create({
+  // PERBAIKAN: Gunakan model 'Admin' (huruf A besar)
+  // Kolomnya sudah benar 'password' sesuai schema antum
+  const admin = await prisma.admin.create({
     data: {
       email,
       password: hashedPassword,
@@ -18,14 +19,13 @@ async function main() {
     },
   });
 
-  console.log("Admin berhasil dibuat:");
+  console.log("Admin berhasil dibuat di tabel public.admins:");
   console.log("Email:", email);
-  console.log("Password:", plainPassword);
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error("Gagal membuat admin:", e);
     process.exit(1);
   })
   .finally(async () => {
