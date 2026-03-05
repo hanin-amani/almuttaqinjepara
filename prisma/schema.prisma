@@ -50,14 +50,19 @@ model Info {
   thumbnail   String?
   status      String        @default("publish")
   is_active   Boolean       @default(true)
-  category_id String?
-  author_id   String?
+  
+  // Perbaikan tipe data agar sesuai dengan model referensinya (@db.Uuid)
+  category_id String?       @db.Uuid
+  author_id   String?       @db.Uuid
 
   created_at  DateTime      @default(now())
   updated_at  DateTime      @updatedAt
 
+  // Hubungan ke Category
   category    InfoCategory? @relation(fields: [category_id], references: [id])
-  author      Profile?      @relation(fields: [author_id], references: [id])
+  
+  // PERBAIKAN: Menambahkan nama relasi "AuthorInfo" agar sinkron dengan model Profile
+  author      Profile?      @relation("AuthorInfo", fields: [author_id], references: [id])
 
   @@map("infos")
   @@schema("public")
@@ -111,9 +116,9 @@ model Profile {
   role       String   @default("penyiar")
   created_at DateTime @default(now())
 
+  // Relasi harus sinkron namanya dengan yang ada di model Info
   infos Info[] @relation("AuthorInfo")
 
   @@map("profiles")
   @@schema("public")
 }
-
