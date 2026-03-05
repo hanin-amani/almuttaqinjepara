@@ -8,11 +8,11 @@ import { AudioProvider } from "@/context/AudioContext"
 export const metadata: Metadata = {
   metadataBase: new URL("https://radio-suara-al-muttaqin.vercel.app"),
   title: {
-    default: "Radio Suara Al Muttaqin Purwokerto", 
+    default: "Radio Suara Al Muttaqin Jepara", 
     template: "%s | Radio Suara Al Muttaqin",
   },
   description:
-    "Radio dakwah Pondok Pesantren Al Muttaqin Purwokerto. Menginspirasi hati, menguatkan iman melalui siaran islami dan kajian Al-Qur'an.",
+    "Radio dakwah Pondok Pesantren Al Muttaqin Jepara. Menginspirasi hati, menguatkan iman melalui siaran islami dan kajian Al-Qur'an.",
 }
 
 export default function RootLayout({

@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["public", "auth"]
+  schemas  = ["public"]
 }
 
 /////////////////////////////////////////////////////
@@ -37,33 +37,67 @@ model SongRequest {
   @@schema("public")
 }
 
+/////////////////////////////////////////////////////
+// SISTEM ARTIKEL / BERITA
+/////////////////////////////////////////////////////
+
 model Info {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title      String
-  slug       String   @unique
-  thumbnail  String?
-  excerpt    String?  @db.Text
-  content    String   @db.Text
-  category   String   @default("Umum")
-  status     String   @default("draft")
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now())
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String
+  thumbnail   String?
+  status      String   @default("publish")
+  is_active   Boolean  @default(true)
+
+  category_id String?  @db.Uuid
+  author_id   String?  @db.Uuid
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  category InfoCategory? @relation(fields: [category_id], references: [id])
+  author   Profile?      @relation("AuthorInfo", fields: [author_id], references: [id])
+
+  @@index([slug])
+  @@index([category_id])
+  @@index([author_id])
 
   @@map("infos")
   @@schema("public")
 }
 
+model InfoCategory {
+  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name  String
+  slug  String @unique
+
+  infos Info[]
+
+  @@map("info_categories")
+  @@schema("public")
+}
+
+/////////////////////////////////////////////////////
+// ADMIN LOGIN
+/////////////////////////////////////////////////////
+
 model Admin {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email      String   @unique
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String    @unique
   password   String
-  role       String   @default("admin")
+  role       String    @default("admin")
   last_login DateTime?
-  created_at DateTime @default(now())
+  created_at DateTime  @default(now())
 
   @@map("admins")
   @@schema("public")
 }
+
+/////////////////////////////////////////////////////
+// STATISTIK PENDENGAR RADIO
+/////////////////////////////////////////////////////
 
 model Listener {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -73,29 +107,18 @@ model Listener {
   @@schema("public")
 }
 
+/////////////////////////////////////////////////////
+// PROFIL PENYIAR / AUTHOR
+/////////////////////////////////////////////////////
+
 model Profile {
   id         String   @id @db.Uuid
   role       String   @default("penyiar")
   created_at DateTime @default(now())
 
-  user       User @relation(fields: [id], references: [id], onDelete: Cascade)
+  infos Info[] @relation("AuthorInfo")
 
   @@map("profiles")
   @@schema("public")
 }
 
-/////////////////////////////////////////////////////
-// AUTH SCHEMA (SUPABASE AUTH)
-/////////////////////////////////////////////////////
-
-model User {
-  id            String    @id @db.Uuid
-  email         String?   @db.VarChar(255)
-  role          String?   @db.VarChar(255)
-  created_at    DateTime? @db.Timestamptz(6)
-
-  profiles Profile?
-
-  @@map("users")
-  @@schema("auth")
-}

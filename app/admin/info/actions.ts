@@ -3,134 +3,38 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-/* ================================
-   Helper: Generate Slug
-================================ */
-function generateSlug(title: string) {
-  const baseSlug = title
+export async function createInfo(formData: FormData) {
+  const title = formData.get("title") as string;
+  const content = formData.get("content") as string;
+
+  if (!title || !content) {
+    throw new Error("Judul dan konten wajib diisi");
+  }
+
+  const slug = title
     .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-");
+    .replace(/ /g, "-")
+    .replace(/[^\w-]+/g, "");
 
-  const random = Math.random().toString(36).substring(2, 6);
+  await prisma.info.create({
+    data: {
+      title,
+      slug,
+      content,
+      status: "publish",
+      is_active: true,
+    },
+  });
 
-  return `${baseSlug}-${random}`;
+  revalidatePath("/admin/info");
 }
 
-/* ================================
-   Helper: Generate Excerpt
-================================ */
-function generateExcerpt(content: string) {
-  const plain = content.replace(/<[^>]*>?/gm, "");
-  return plain.substring(0, 150) + (plain.length > 150 ? "..." : "");
-}
+export async function deleteInfo(formData: FormData) {
+  const id = formData.get("id") as string;
 
-/* ================================
-   TAMBAH BERITA
-================================ */
-export async function addInfo(formData: FormData) {
-  try {
-    const title = (formData.get("title") as string)?.trim();
-    const content = (formData.get("content") as string)?.trim();
-    const category = (formData.get("category") as string)?.trim();
-    const thumbnail = (formData.get("thumbnail") as string) || "";
-    const status = (formData.get("status") as string) || "published";
+  await prisma.info.delete({
+    where: { id },
+  });
 
-    if (!title || !content) {
-      return { success: false, error: "Judul dan konten wajib diisi." };
-    }
-
-    const slug = generateSlug(title);
-
-    await prisma.info.create({
-      data: {
-        title,
-        slug,
-        content,
-        category,
-        thumbnail,
-        status,
-        is_active: true,
-        excerpt: generateExcerpt(content),
-      },
-    });
-
-    revalidatePath("/admin/info");
-    revalidatePath("/info");
-    revalidatePath("/");
-
-    return { success: true };
-  } catch (error) {
-    console.error("Gagal menambah berita:", error);
-    return { success: false, error: "Gagal menyimpan berita." };
-  }
-}
-
-/* ================================
-   UPDATE BERITA
-================================ */
-export async function updateInfo(id: string, formData: FormData) {
-  try {
-    const title = (formData.get("title") as string)?.trim();
-    const content = (formData.get("content") as string)?.trim();
-    const category = (formData.get("category") as string)?.trim();
-    const thumbnail = (formData.get("thumbnail") as string) || "";
-    const status = (formData.get("status") as string) || "published";
-
-    if (!id || !title || !content) {
-      return { success: false, error: "Data tidak lengkap." };
-    }
-
-    const slug = title
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/\s+/g, "-");
-
-    await prisma.info.update({
-      where: { id },
-      data: {
-        title,
-        slug,
-        content,
-        category,
-        thumbnail,
-        status,
-        excerpt: content.replace(/<[^>]*>?/gm, "").substring(0, 150) + "...",
-      },
-    });
-
-    revalidatePath("/admin/info");
-    revalidatePath("/info");
-    revalidatePath("/");
-
-    return { success: true };
-
-  } catch (error) {
-    console.error("Gagal update berita:", error);
-    return { success: false, error: "Gagal memperbarui informasi." };
-  }
-}
-
-/* ================================
-   HAPUS BERITA
-================================ */
-export async function deleteInfo(formData: FormData): Promise<void> {
-  try {
-    const id = formData.get("id") as string;
-
-    if (!id) return;
-
-    await prisma.info.delete({
-      where: { id }
-    });
-
-    revalidatePath("/admin/info");
-    revalidatePath("/info");
-    revalidatePath("/");
-
-  } catch (error) {
-    console.error("Gagal menghapus berita:", error);
-  }
+  revalidatePath("/admin/info");
 }
