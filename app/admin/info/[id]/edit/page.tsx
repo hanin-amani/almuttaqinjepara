@@ -2,23 +2,30 @@ import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EditInfoForm from "./EditInfoForm";
 
-export default async function EditInfoPage({ params }: { params: { id: string } }) {
-  const info = await prisma.info.findUnique({
-    where: { id: params.id }
+export default async function EditInfoPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  // 1. Ambil ID dari params (Next.js 16 mewajibkan await)
+  const { id } = await params;
+
+  // 2. Ambil data artikel dari database Prisma
+  const article = await prisma.info.findUnique({
+    where: { id: id },
   });
 
-  if (!info) notFound();
+  // 3. Jika artikel tidak ditemukan, tampilkan halaman 404
+  if (!article) {
+    notFound();
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-10">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-black text-emerald-900 mb-10 uppercase italic tracking-tighter text-left">
-          Edit Artikel: {info.title} 📝
-        </h1>
-        
-        {/* PERBAIKAN: Ganti 'info={info}' menjadi 'data={info}' */}
-        <EditInfoForm data={info} />
+    <main className="min-h-screen bg-slate-50 py-12">
+      <div className="container mx-auto max-w-5xl px-6">
+        {/* PENTING: Nama prop harus 'data' agar sesuai dengan EditInfoForm Anda */}
+        <EditInfoForm data={article} />
       </div>
-    </div>
+    </main>
   );
 }

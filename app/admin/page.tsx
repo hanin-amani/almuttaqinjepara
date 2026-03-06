@@ -101,7 +101,7 @@ export default async function AdminDashboard() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
               </span>
-              Sebaran Pendengar Aktif Salaam 🌍
+              Sebaran Pendengar Aktif Radio Al Muttaqin 🌍
             </h3>
           </div>
           <div className="h-96 w-full rounded-3xl overflow-hidden border border-gray-100 relative z-0">
@@ -113,7 +113,7 @@ export default async function AdminDashboard() {
         <div className="bg-white p-6 rounded-[2.5rem] border border-emerald-100 shadow-sm mb-14 overflow-hidden">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-[10px] font-black text-emerald-900 uppercase tracking-[0.2em] italic flex items-center gap-3">
-              Rincian Lokasi Pendengar Salaam 🗺️
+              Rincian Lokasi Pendengar Radio Al Muttaqin 🗺️
             </h3>
           </div>
           {/* Komponen Client untuk Auto-update Tabel */}

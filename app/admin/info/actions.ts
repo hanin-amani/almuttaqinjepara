@@ -1,82 +1,72 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { generateSlug } from "@/lib/slug";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-/////////////////////////////////////////////////////
-// CREATE INFO
-/////////////////////////////////////////////////////
-
+// 1. TAMBAH ARTIKEL
 export async function createInfo(formData: FormData) {
-
   const title = formData.get("title") as string;
   const content = formData.get("content") as string;
-  const category = formData.get("category") as string;
   const thumbnail = formData.get("thumbnail") as string;
+  const category_id = formData.get("category_id") as string;
   const status = formData.get("status") as string;
 
-  const slug = generateSlug(title);
+  const slug = title.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
 
   await prisma.info.create({
     data: {
       title,
       slug,
       content,
-      thumbnail: thumbnail || null,
-      status,
-      category_id: category || null
-    }
+      thumbnail,
+      status: status || "publish",
+      category_id: category_id || null,
+    },
   });
 
   revalidatePath("/admin/info");
+  revalidatePath("/warta");
   redirect("/admin/info");
 }
 
-/////////////////////////////////////////////////////
-// UPDATE INFO
-/////////////////////////////////////////////////////
-
+// 2. UPDATE ARTIKEL (FITUR YANG TADI ERROR)
 export async function updateInfo(formData: FormData) {
-
   const id = formData.get("id") as string;
-
   const title = formData.get("title") as string;
   const content = formData.get("content") as string;
-  const category = formData.get("category") as string;
   const thumbnail = formData.get("thumbnail") as string;
+  const category_id = formData.get("category_id") as string;
   const status = formData.get("status") as string;
 
-  const slug = generateSlug(title);
+  if (!id) throw new Error("ID tidak ditemukan untuk update");
 
   await prisma.info.update({
-    where: { id },
+    where: { id: id },
     data: {
       title,
-      slug,
       content,
-      thumbnail: thumbnail || null,
-      status,
-      category_id: category || null
-    }
+      thumbnail,
+      status: status || "publish",
+      category_id: category_id || null,
+    },
   });
 
+  // Refresh cache agar perubahan langsung muncul di Warta Pondok
   revalidatePath("/admin/info");
+  revalidatePath("/warta");
   redirect("/admin/info");
 }
 
-/////////////////////////////////////////////////////
-// DELETE INFO
-/////////////////////////////////////////////////////
-
+// 3. HAPUS ARTIKEL
 export async function deleteInfo(formData: FormData) {
-
   const id = formData.get("id") as string;
+  if (!id) return;
 
   await prisma.info.delete({
-    where: { id }
+    where: { id: id },
   });
 
   revalidatePath("/admin/info");
+  revalidatePath("/warta");
 }

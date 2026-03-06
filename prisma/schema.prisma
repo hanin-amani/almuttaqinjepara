@@ -112,11 +112,11 @@ model Listener {
 /////////////////////////////////////////////////////
 
 model Profile {
-  id         String   @id @db.Uuid
+  // Tambahkan @default agar tidak error saat create profile baru
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   role       String   @default("penyiar")
   created_at DateTime @default(now())
 
-  // Relasi harus sinkron namanya dengan yang ada di model Info
   infos Info[] @relation("AuthorInfo")
 
   @@map("profiles")
