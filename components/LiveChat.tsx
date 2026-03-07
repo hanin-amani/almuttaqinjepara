@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { Send, User, MessageSquare, ShieldCheck, Volume2 } from "lucide-react";
+import { Send, User, MessageSquare, Volume2, Activity, RefreshCcw } from "lucide-react";
+import { useAudio } from "@/context/AudioContext";
+import { sendChatMessage, getChatMessages } from "@/app/actions/chatActions";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,160 +12,156 @@ const supabase = createClient(
 );
 
 export default function LiveChat() {
+  const { isPlaying } = useAudio();
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [username, setUsername] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [isMuted, setIsMuted] = useState(false); // Fitur Mute agar jamaah nyaman
+  const [isMuted, setIsMuted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const scrollRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null); // Ref untuk suara notifikasi
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const loadMessages = async () => {
+    setIsLoading(true);
+    const data = await getChatMessages();
+    setMessages(data || []);
+    setIsLoading(false);
+  };
 
   useEffect(() => {
-    const fetchInitialMessages = async () => {
-      const { data } = await supabase
-        .from("chat_messages")
-        .select("*")
-        .order("created_at", { ascending: true })
-        .limit(20);
-      if (data) setMessages(data);
-    };
+    loadMessages();
 
-    fetchInitialMessages();
-
-    const channel = supabase
-      .channel("live_chat_radio")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_messages" },
+    // REALTIME: Mendengarkan database secara langsung
+    const channel = supabase.channel("live_chat_radio")
+      .on("postgres_changes", 
+        { event: "INSERT", schema: "public", table: "chat_messages" }, 
         (payload) => {
-          setMessages((prev) => [...prev, payload.new]);
-          
-          // MAINKAN SUARA: Hanya jika tidak di-mute dan bukan pesan dari diri sendiri
-          // (Opsional: tambahkan logika cek username jika ingin suara hanya muncul untuk pesan orang lain)
+          setMessages((prev) => {
+            // Cek agar tidak ada pesan ganda jika Optimistic UI sudah jalan
+            const exists = prev.find(m => m.id === payload.new.id);
+            if (exists) return prev;
+            return [...prev, payload.new];
+          });
           if (audioRef.current && !isMuted) {
-            audioRef.current.play().catch(err => console.log("Audio play blocked by browser"));
+            audioRef.current.play().catch(() => {});
           }
         }
-      )
-      .subscribe();
+      ).subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [isMuted]); // Re-subscribe saat status mute berubah
+    return () => { supabase.removeChannel(channel); };
+  }, [isMuted]);
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth"
+      });
     }
   }, [messages]);
 
-  const sendMessage = async (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !username.trim() || isSending) return;
 
+    // OPTIMISTIC UPDATE: Langsung munculkan di layar
+    const tempMsg = {
+      id: Math.random().toString(),
+      username: username,
+      message: newMessage,
+      created_at: new Date().toISOString()
+    };
+    setMessages((prev) => [...prev, tempMsg]);
+
     setIsSending(true);
-    await supabase.from("chat_messages").insert([
-      { username: username.toUpperCase(), message: newMessage }
-    ]);
-    setNewMessage("");
+    const result = await sendChatMessage(username, newMessage);
+
+    if (result.success) {
+      setNewMessage("");
+    } else {
+      alert("Koneksi bermasalah.");
+    }
     setIsSending(false);
   };
 
   return (
-    <section className="bg-white border-x border-b border-slate-200 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-      
-      {/* AUDIO ELEMENT (Hidden) */}
+    <section className="max-w-5xl mx-auto my-16 overflow-hidden shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-slate-100 grid grid-cols-1 lg:grid-cols-12">
       <audio ref={audioRef} src="/notify.mp3" preload="auto" />
 
-      {/* KIRI: PANEL INFORMASI */}
-      <div className="lg:col-span-4 bg-emerald-950 text-white p-10 flex flex-col justify-between border-r border-white/5">
+      {/* SIDEBAR - DARK PROFESSIONAL */}
+      <div className="lg:col-span-4 bg-[#022c22] p-10 flex flex-col justify-between border-r border-slate-50">
         <div>
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3 text-emerald-400">
-              <MessageSquare size={18} />
-              <span className="text-[9px] font-black uppercase tracking-[0.5em]">Live Conversation</span>
+          <div className="flex items-center justify-between mb-10">
+            <div className="flex items-center gap-2">
+              <div className={`h-2 w-2 rounded-full ${isPlaying ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`}></div>
+              <span className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-widest">Live Connect</span>
             </div>
-            
-            {/* TOMBOL MUTE - Fitur Canggih */}
-            <button 
-              onClick={() => setIsMuted(!isMuted)}
-              className={`p-2 border transition-all ${isMuted ? 'border-red-500 text-red-500' : 'border-emerald-500 text-emerald-500'}`}
-              title={isMuted ? "Bunyi Mati" : "Bunyi Hidup"}
-            >
-              <Volume2 size={12} className={isMuted ? 'opacity-30' : 'opacity-100'} />
+            <button onClick={() => setIsMuted(!isMuted)} className="text-emerald-500 hover:text-white transition-colors">
+              <Volume2 size={16} className={isMuted ? "opacity-20" : "opacity-100"} />
             </button>
           </div>
-
-          <h2 className="text-3xl font-black uppercase leading-[0.9] mb-6">
-            Interaksi <br /> <span className="text-emerald-500">Jamaah</span>
+          
+          <h2 className="text-2xl font-black text-white leading-none mb-3 italic">
+            INTERAKSI <br /> <span className="text-emerald-400 text-3xl">JAMAAH</span>
           </h2>
-          <p className="text-slate-400 text-[11px] font-bold leading-relaxed uppercase tracking-wider max-w-xs">
-            Suara antum, dakwah kita. Sampaikan salam melalui Radio Suara Al Muttaqin.
+          <p className="text-emerald-100/30 text-[10px] font-bold uppercase tracking-[0.2em] leading-relaxed mb-8">
+            Radio Suara Al Muttaqin <br /> Jepara, Jawa Tengah
           </p>
         </div>
         
-        <div className="pt-8 flex flex-col gap-4">
-          <div className="flex items-center gap-2 text-[9px] font-black text-emerald-500/50 uppercase tracking-widest">
-            <ShieldCheck size={12} />
-            Realtime & Sound Enabled
-          </div>
-          <div className="h-1 w-12 bg-emerald-500"></div>
-        </div>
+        <button onClick={loadMessages} className="flex items-center gap-2 text-[10px] font-bold text-emerald-500/30 uppercase tracking-widest hover:text-emerald-400 transition-all">
+          <RefreshCcw size={12} className={isLoading ? "animate-spin" : ""} />
+          Sync Data
+        </button>
       </div>
 
-      {/* KANAN: CHAT INTERFACE */}
-      <div className="lg:col-span-8 flex flex-col bg-slate-50">
-        <div 
-          ref={scrollRef} 
-          className="h-[400px] overflow-y-auto p-8 space-y-4 scroll-smooth"
-        >
+      {/* CHAT AREA - CLEAN WHITE */}
+      <div className="lg:col-span-8 flex flex-col bg-white">
+        <div ref={scrollRef} className="h-[380px] overflow-y-auto p-10 space-y-6 scroll-smooth custom-scrollbar">
           {messages.map((msg, i) => (
-            <div key={i} className="flex flex-col items-start group animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="flex items-center gap-3 mb-1 ml-1">
-                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">{msg.username}</span>
-                <span className="text-[8px] text-slate-300 font-bold">
+            <div key={i} className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="flex items-center gap-2 mb-1 ml-1">
+                <span className="text-[11px] font-bold text-emerald-700">{msg.username}</span>
+                <span className="text-[9px] text-slate-300 font-medium">
                   {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
-              <div className="bg-white border border-slate-200 px-5 py-3 shadow-sm group-hover:border-emerald-200 transition-colors">
-                <p className="text-sm font-medium text-slate-700 leading-snug">{msg.message}</p>
+              {/* Pesan Tanpa Kotak Kaku (Bubble Style) */}
+              <div className="bg-slate-50 border border-slate-100 px-6 py-3 rounded-[1.6rem] rounded-tl-none shadow-sm max-w-[85%]">
+                <p className="text-[14px] font-medium text-slate-700 leading-relaxed capitalize">
+                  {msg.message}
+                </p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Form Input */}
-        <form onSubmit={sendMessage} className="p-8 bg-white border-t border-slate-100">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="relative md:col-span-1">
+        {/* INPUT - MODERN & FLOATING */}
+        <form onSubmit={handleSend} className="p-8 bg-slate-50/30 border-t border-slate-100">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="relative md:w-1/3">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
               <input
-                type="text"
-                placeholder="NAMA"
-                value={username}
+                type="text" placeholder="Nama Anda" value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-100 text-[10px] font-black uppercase outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all"
+                className="w-full pl-10 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-[12px] font-bold text-slate-700 outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/40 transition-all"
                 required
               />
             </div>
-            <div className="md:col-span-3 flex gap-3">
+            <div className="flex-1 flex gap-2">
               <input
-                type="text"
-                placeholder="TULIS PESAN..."
-                value={newMessage}
+                type="text" placeholder="Tulis pesan..." value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                className="flex-1 px-5 py-4 bg-slate-50 border border-slate-100 text-[10px] font-black uppercase outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all"
+                className="flex-1 px-6 py-4 bg-white border border-slate-200 rounded-2xl text-[12px] font-medium text-slate-700 outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/40 transition-all"
                 required
               />
               <button
-                type="submit"
-                disabled={isSending}
-                className="bg-emerald-950 text-white px-8 py-4 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-700 active:scale-95 transition-all disabled:bg-slate-300 flex items-center gap-2"
+                type="submit" disabled={isSending}
+                className="bg-[#022c22] text-white px-8 py-4 rounded-2xl font-black transition-all hover:bg-emerald-800 active:scale-95 disabled:bg-slate-200 shadow-xl shadow-emerald-950/10"
               >
-                {isSending ? "..." : <Send size={14} />}
-                {isSending ? "" : "KIRIM"}
+                <Send size={18} />
               </button>
             </div>
           </div>
