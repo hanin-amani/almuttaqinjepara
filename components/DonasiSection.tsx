@@ -48,8 +48,8 @@ export default function DonasiSection({ bsi, bri, an }: DonasiProps) {
           <div className="group bg-emerald-900/20 backdrop-blur-md p-10 rounded-[3rem] border border-emerald-800/50 hover:border-emerald-500 transition-all duration-500 text-left relative overflow-hidden">
             <div className="flex justify-between items-start mb-8">
                <div className="bg-white/10 p-3 rounded-2xl">
-                 {/* Pastikan logo bsi-white.png ada di folder /public/ */}
-                 <Image src="/bsi-white.png" alt="BSI" width={80} height={30} className="opacity-90" />
+                 {/* Pastikan logo bsi.png ada di folder /public/ */}
+                 <Image src="/bsi.png" alt="BSI" width={80} height={30} className="opacity-90" />
                </div>
                <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Bank Syariah Indonesia</p>
             </div>
@@ -70,8 +70,8 @@ export default function DonasiSection({ bsi, bri, an }: DonasiProps) {
           <div className="group bg-emerald-900/20 backdrop-blur-md p-10 rounded-[3rem] border border-emerald-800/50 hover:border-emerald-500 transition-all duration-500 text-left relative overflow-hidden">
             <div className="flex justify-between items-start mb-8">
                <div className="bg-white/10 p-3 rounded-2xl">
-                 {/* Pastikan logo bri-white.png ada di folder /public/ */}
-                 <Image src="/bri-white.png" alt="BRI" width={80} height={30} className="opacity-90" />
+                 {/* Pastikan logo bri.png ada di folder /public/ */}
+                 <Image src="/bri.png" alt="BRI" width={80} height={30} className="opacity-90" />
                </div>
                <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Bank Rakyat Indonesia</p>
             </div>
