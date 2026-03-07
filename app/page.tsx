@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import Hero from "@/components/Hero";
 import LiveSection from "@/components/LiveSection";
+import LiveChat from "@/components/LiveChat"; // Import komponen chat
 import ScheduleSection from "@/components/ScheduleSection"; 
 import InfoSection from "@/components/InfoSection"; 
 import DonasiSection from "@/components/DonasiSection";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * HOMEPAGE RADIO SUARA AL MUTTAQIN
- * Fokus: Kecepatan akses audio dan informasi warta terbaru secara dinamis.
+ * Fokus: Kecepatan akses audio, interaksi jamaah, dan informasi warta terbaru.
  */
 async function getLatestWarta() {
   // Mengambil 3 artikel terbaru dengan kategori terkait untuk ditampilkan di Beranda
@@ -38,6 +39,9 @@ export default async function Home() {
 
       {/* 2. Player Utama: Streaming Audio Radio Suara Al Muttaqin */}
       <LiveSection />
+
+      {/* 2.5 Live Chat Section: Interaksi Real-time Jamaah (Tepat di bawah Player) */}
+      <LiveChat />
 
       {/* 3. Jadwal Siaran: Program harian siaran santri */}
       <ScheduleSection /> 

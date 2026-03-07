@@ -4,9 +4,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  schemas  = ["public"]
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Ditambahkan untuk bypass connection pooler saat migrasi
+  schemas   = ["public"]
 }
 
 /////////////////////////////////////////////////////
@@ -37,6 +38,17 @@ model SongRequest {
   @@schema("public")
 }
 
+// MODEL BARU: LIVE CHAT JAMAAH
+model ChatMessage {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username   String
+  message    String
+  created_at DateTime @default(now())
+
+  @@map("chat_messages")
+  @@schema("public")
+}
+
 /////////////////////////////////////////////////////
 // SISTEM ARTIKEL / BERITA
 /////////////////////////////////////////////////////
@@ -61,7 +73,7 @@ model Info {
   // Hubungan ke Category
   category    InfoCategory? @relation(fields: [category_id], references: [id])
   
-  // PERBAIKAN: Menambahkan nama relasi "AuthorInfo" agar sinkron dengan model Profile
+  // Hubungan ke Profile (Author)
   author      Profile?      @relation("AuthorInfo", fields: [author_id], references: [id])
 
   @@map("infos")
@@ -84,12 +96,12 @@ model InfoCategory {
 /////////////////////////////////////////////////////
 
 model Admin {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email      String    @unique
-  password   String
-  role       String    @default("admin")
-  last_login DateTime?
-  created_at DateTime  @default(now())
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String    @unique
+  password    String
+  role        String    @default("admin")
+  last_login  DateTime?
+  created_at  DateTime  @default(now())
 
   @@map("admins")
   @@schema("public")
@@ -112,7 +124,6 @@ model Listener {
 /////////////////////////////////////////////////////
 
 model Profile {
-  // Tambahkan @default agar tidak error saat create profile baru
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   role       String   @default("penyiar")
   created_at DateTime @default(now())
