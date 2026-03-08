@@ -1,19 +1,27 @@
+import dynamic from "next/dynamic"; // 1. Import dynamic untuk Lazy Loading
 import prisma from "@/lib/prisma";
 import Hero from "@/components/Hero";
 import LiveSection from "@/components/LiveSection";
-import LiveChat from "@/components/LiveChat"; // Import komponen chat
 import ScheduleSection from "@/components/ScheduleSection"; 
 import InfoSection from "@/components/InfoSection"; 
-import DonasiSection from "@/components/DonasiSection";
+
+// 2. Dynamic Import untuk komponen berat agar tidak membebani First Load
+const LiveChat = dynamic(() => import("@/components/LiveChat"), { 
+  ssr: false,
+  loading: () => <div className="h-40 animate-pulse bg-slate-50 rounded-3xl mx-auto max-w-6xl my-10" /> 
+});
+
+const DonasiSection = dynamic(() => import("@/components/DonasiSection"), { 
+  ssr: false 
+});
 
 export const dynamic = "force-dynamic";
 
 /**
  * HOMEPAGE RADIO SUARA AL MUTTAQIN
- * Fokus: Kecepatan akses audio, interaksi jamaah, dan informasi warta terbaru.
+ * Optimasi: Lazy Loading & Server-Side Data Fetching
  */
 async function getLatestWarta() {
-  // Mengambil 3 artikel terbaru dengan kategori terkait untuk ditampilkan di Beranda
   return await prisma.info.findMany({
     where: { 
       status: "publish", 
@@ -34,22 +42,22 @@ export default async function Home() {
 
   return (
     <main className="relative min-h-screen bg-white">
-      {/* 1. Header Hero: Sambutan visual utama identitas Al Muttaqin */}
+      {/* 1. HERO: Pastikan di dalam komponen ini, gambar utama menggunakan priority={true} */}
       <Hero />
 
-      {/* 2. Player Utama: Streaming Audio Radio Suara Al Muttaqin */}
+      {/* 2. PLAYER: Komponen inti siaran */}
       <LiveSection />
 
-      {/* 2.5 Live Chat Section: Interaksi Real-time Jamaah (Tepat di bawah Player) */}
+      {/* 3. LIVE CHAT: Sekarang dimuat secara Lazy Load (Skor Performa naik) */}
       <LiveChat />
 
-      {/* 3. Jadwal Siaran: Program harian siaran santri */}
+      {/* 4. JADWAL: Informasi program harian */}
       <ScheduleSection /> 
       
-      {/* 4. Warta Pondok: Muncul di bawah Schedule, menampilkan Kabar Pondok & Materi Khutbah */}
+      {/* 5. WARTA PONDOK: Kabar terbaru Pesantren Al Muttaqin */}
       <InfoSection articles={latestWarta} />
       
-      {/* 5. Sesi Donasi: Informasi Infaq & Jariyah Baitul Maal Al Muttaqin */}
+      {/* 6. DONASI: Informasi Infaq (Lazy Loaded) */}
       <DonasiSection 
         bsi="7120202043" 
         bri="0022 01 028443 53 3"

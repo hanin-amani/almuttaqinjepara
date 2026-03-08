@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { Send, User, MessageSquare, Volume2, Activity, RefreshCcw } from "lucide-react";
+import { Send, User, MessageSquare, Volume2, Activity, RefreshCcw, Smile } from "lucide-react";
 import { useAudio } from "@/context/AudioContext";
 import { sendChatMessage, getChatMessages } from "@/app/actions/chatActions";
 
@@ -23,6 +23,15 @@ export default function LiveChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // Fungsi pembantu untuk memformat waktu tanpa error "Invalid Date"
+  const formatTime = (dateStr: string | null) => {
+    if (!dateStr) return "--:--";
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) 
+      ? "Baru saja" 
+      : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   const loadMessages = async () => {
     setIsLoading(true);
     const data = await getChatMessages();
@@ -33,13 +42,12 @@ export default function LiveChat() {
   useEffect(() => {
     loadMessages();
 
-    // REALTIME: Mendengarkan database secara langsung
+    // REALTIME: Memastikan pesan baru muncul seketika tanpa refresh
     const channel = supabase.channel("live_chat_radio")
       .on("postgres_changes", 
         { event: "INSERT", schema: "public", table: "chat_messages" }, 
         (payload) => {
           setMessages((prev) => {
-            // Cek agar tidak ada pesan ganda jika Optimistic UI sudah jalan
             const exists = prev.find(m => m.id === payload.new.id);
             if (exists) return prev;
             return [...prev, payload.new];
@@ -66,102 +74,114 @@ export default function LiveChat() {
     e.preventDefault();
     if (!newMessage.trim() || !username.trim() || isSending) return;
 
-    // OPTIMISTIC UPDATE: Langsung munculkan di layar
+    // Optimistic Update agar langsung muncul di layar
+    const tempId = Math.random().toString();
     const tempMsg = {
-      id: Math.random().toString(),
+      id: tempId,
       username: username,
       message: newMessage,
       created_at: new Date().toISOString()
     };
+    
     setMessages((prev) => [...prev, tempMsg]);
-
     setIsSending(true);
+
     const result = await sendChatMessage(username, newMessage);
 
     if (result.success) {
       setNewMessage("");
     } else {
-      alert("Koneksi bermasalah.");
+      setMessages((prev) => prev.filter(m => m.id !== tempId));
+      alert("Gagal kirim. Sila cek koneksi antum.");
     }
     setIsSending(false);
   };
 
   return (
-    <section className="max-w-5xl mx-auto my-16 overflow-hidden shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1)] rounded-[3rem] bg-white border border-slate-100 grid grid-cols-1 lg:grid-cols-12">
+    <section className="max-w-5xl mx-auto my-20 overflow-hidden shadow-[0_30px_100px_-15px_rgba(0,0,0,0.08)] rounded-[3rem] bg-white border border-slate-100 grid grid-cols-1 lg:grid-cols-12">
       <audio ref={audioRef} src="/notify.mp3" preload="auto" />
 
-      {/* SIDEBAR - DARK PROFESSIONAL */}
+      {/* SIDEBAR - PROFESSIONAL DARK */}
       <div className="lg:col-span-4 bg-[#022c22] p-10 flex flex-col justify-between border-r border-slate-50">
         <div>
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center justify-between mb-12">
             <div className="flex items-center gap-2">
-              <div className={`h-2 w-2 rounded-full ${isPlaying ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`}></div>
-              <span className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-widest">Live Connect</span>
+              <div className={`h-2 w-2 rounded-full ${isPlaying ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`}></div>
+              <span className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-widest">Live System</span>
             </div>
-            <button onClick={() => setIsMuted(!isMuted)} className="text-emerald-500 hover:text-white transition-colors">
-              <Volume2 size={16} className={isMuted ? "opacity-20" : "opacity-100"} />
+            <button onClick={() => setIsMuted(!isMuted)} className="text-emerald-500/50 hover:text-emerald-400 transition-colors">
+              <Volume2 size={18} className={isMuted ? "opacity-20" : "opacity-100"} />
             </button>
           </div>
           
-          <h2 className="text-2xl font-black text-white leading-none mb-3 italic">
+          <h2 className="text-2xl font-black text-white leading-tight mb-2 italic">
             INTERAKSI <br /> <span className="text-emerald-400 text-3xl">JAMAAH</span>
           </h2>
-          <p className="text-emerald-100/30 text-[10px] font-bold uppercase tracking-[0.2em] leading-relaxed mb-8">
+          <div className="h-1 w-8 bg-emerald-400 mb-8 rounded-full"></div>
+          
+          <p className="text-emerald-100/30 text-[10px] font-bold uppercase tracking-[0.2em] leading-relaxed">
             Radio Suara Al Muttaqin <br /> Jepara, Jawa Tengah
           </p>
         </div>
         
         <button onClick={loadMessages} className="flex items-center gap-2 text-[10px] font-bold text-emerald-500/30 uppercase tracking-widest hover:text-emerald-400 transition-all">
-          <RefreshCcw size={12} className={isLoading ? "animate-spin" : ""} />
+          <RefreshCcw size={14} className={isLoading ? "animate-spin" : ""} />
           Sync Data
         </button>
       </div>
 
       {/* CHAT AREA - CLEAN WHITE */}
       <div className="lg:col-span-8 flex flex-col bg-white">
-        <div ref={scrollRef} className="h-[380px] overflow-y-auto p-10 space-y-6 scroll-smooth custom-scrollbar">
-          {messages.map((msg, i) => (
-            <div key={i} className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="flex items-center gap-2 mb-1 ml-1">
-                <span className="text-[11px] font-bold text-emerald-700">{msg.username}</span>
-                <span className="text-[9px] text-slate-300 font-medium">
-                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-              {/* Pesan Tanpa Kotak Kaku (Bubble Style) */}
-              <div className="bg-slate-50 border border-slate-100 px-6 py-3 rounded-[1.6rem] rounded-tl-none shadow-sm max-w-[85%]">
-                <p className="text-[14px] font-medium text-slate-700 leading-relaxed capitalize">
-                  {msg.message}
-                </p>
-              </div>
+        <div ref={scrollRef} className="h-[420px] overflow-y-auto p-10 space-y-6 scroll-smooth custom-scrollbar">
+          {messages.length === 0 && !isLoading ? (
+            <div className="h-full flex flex-col items-center justify-center opacity-10 italic">
+              <MessageSquare size={48} className="mb-4" />
+              <p className="text-xs font-bold uppercase tracking-widest text-black">Belum ada percakapan</p>
             </div>
-          ))}
+          ) : (
+            messages.map((msg, i) => (
+              <div key={msg.id || i} className="flex flex-col items-start animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="flex items-center gap-2 mb-1.5 ml-1">
+                  <span className="text-[11px] font-bold text-emerald-800">{msg.username}</span>
+                  <span className="text-[9px] text-slate-300 font-medium italic">
+                    {formatTime(msg.created_at)}
+                  </span>
+                </div>
+                {/* Bubble Style yang Modern & Tidak Kaku */}
+                <div className="bg-slate-50 border border-slate-100 px-6 py-3 rounded-[1.8rem] rounded-tl-none shadow-sm max-w-[85%]">
+                  <p className="text-[14px] font-medium text-slate-700 leading-relaxed capitalize">
+                    {msg.message}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
-        {/* INPUT - MODERN & FLOATING */}
-        <form onSubmit={handleSend} className="p-8 bg-slate-50/30 border-t border-slate-100">
-          <div className="flex flex-col md:flex-row gap-3">
+        {/* INPUT AREA - MODERN & ROUNDED */}
+        <form onSubmit={handleSend} className="p-8 bg-slate-50/30 border-t border-slate-50">
+          <div className="flex flex-col md:flex-row gap-4">
             <div className="relative md:w-1/3">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
               <input
-                type="text" placeholder="Nama Anda" value={username}
+                type="text" placeholder="Nama..." value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-[12px] font-bold text-slate-700 outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/40 transition-all"
+                className="w-full pl-10 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-[12px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/30 transition-all"
                 required
               />
             </div>
-            <div className="flex-1 flex gap-2">
+            <div className="flex-1 flex gap-3">
               <input
-                type="text" placeholder="Tulis pesan..." value={newMessage}
+                type="text" placeholder="Tulis pesan dakwah..." value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                className="flex-1 px-6 py-4 bg-white border border-slate-200 rounded-2xl text-[12px] font-medium text-slate-700 outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/40 transition-all"
+                className="flex-1 px-6 py-4 bg-white border border-slate-200 rounded-2xl text-[12px] font-medium text-slate-800 outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/30 transition-all placeholder:text-slate-300"
                 required
               />
               <button
                 type="submit" disabled={isSending}
-                className="bg-[#022c22] text-white px-8 py-4 rounded-2xl font-black transition-all hover:bg-emerald-800 active:scale-95 disabled:bg-slate-200 shadow-xl shadow-emerald-950/10"
+                className="bg-[#022c22] text-white px-8 py-4 rounded-2xl font-black transition-all hover:bg-emerald-800 active:scale-95 disabled:bg-slate-200 shadow-xl shadow-emerald-950/10 flex items-center justify-center"
               >
-                <Send size={18} />
+                {isSending ? <RefreshCcw size={18} className="animate-spin" /> : <Send size={18} />}
               </button>
             </div>
           </div>
