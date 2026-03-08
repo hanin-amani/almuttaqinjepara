@@ -2,6 +2,8 @@
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder'; // Untuk pesan kosong yang profesional
+import Image from '@tiptap/extension-image'; // Sesuai dengan library yang antum instal
 
 // Komponen Toolbar yang Sticky & Modern
 const MenuBar = ({ editor }: { editor: any }) => {
@@ -54,10 +56,16 @@ const MenuBar = ({ editor }: { editor: any }) => {
 
 export default function RichTextEditor({ content, onChange }: { content: string, onChange: (val: string) => void }) {
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit,
+      Image,
+      Placeholder.configure({
+        placeholder: 'Tuliskan isi warta pondok di sini...', // Mengganti fungsi placeholder Quill
+      }),
+    ],
     content: content,
     
-    // PERBAIKAN: Mencegah error SSR/Hydration pada Next.js
+    // PERBAIKAN KRUSIAL: Mencegah error SSR/Hydration pada Next.js
     immediatelyRender: false,
 
     onUpdate: ({ editor }) => {
@@ -65,7 +73,7 @@ export default function RichTextEditor({ content, onChange }: { content: string,
     },
     editorProps: {
       attributes: {
-        // Styling area ketik agar rapi dan profesional
+        // Styling area ketik agar rapi dan profesional (Clean White Style)
         class: 'prose prose-emerald max-w-none focus:outline-none p-10 min-h-full cursor-text text-slate-700 leading-relaxed',
       },
     },
@@ -73,17 +81,17 @@ export default function RichTextEditor({ content, onChange }: { content: string,
 
   return (
     <div className="border border-slate-200 bg-white rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col h-[550px]">
-      {/* Toolbar di bagian atas */}
+      {/* Toolbar di bagian atas (Sticky) */}
       <MenuBar editor={editor} />
       
       {/* Area Ketik dengan Scroll Internal (Anti-Molor) */}
-      <div className="flex-1 overflow-y-auto bg-white scrollbar-thin scrollbar-thumb-emerald-200">
+      <div className="flex-1 overflow-y-auto bg-white custom-scrollbar">
         <EditorContent editor={editor} />
       </div>
 
-      {/* Footer Editor (Opsional) */}
+      {/* Footer Editor (Identitas Pondok) */}
       <div className="px-6 py-2 bg-slate-50 border-t border-slate-100 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-right">
-        Editor Warta Al Muttaqin
+        Editor Warta Al Muttaqin Jepara
       </div>
     </div>
   );
