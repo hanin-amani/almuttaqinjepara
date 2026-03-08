@@ -1,10 +1,52 @@
+import { Metadata } from "next"; // Tambahkan ini
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import ShareButtons from "@/components/ShareButtons";
 
-// 1. Fungsi mengambil data artikel utama
+type Props = {
+  params: Promise<{ slug: string }>;
+};
+
+// 1. DYNAMIC METADATA: Biar link di WA/FB muncul gambar & judul rapi
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const article = await prisma.info.findUnique({
+    where: { slug: slug },
+    include: { category: true },
+  });
+
+  if (!article) return { title: "Artikel Tidak Ditemukan" };
+
+  // Bersihkan HTML untuk deskripsi meta (max 160 karakter)
+  const plainText = article.content.replace(/<[^>]*>?/gm, "").slice(0, 160);
+  const title = `${article.title} | Radio Suara Al Muttaqin`;
+  const url = `https://radioalmuttaqin.com/warta/${article.slug}`;
+
+  return {
+    title: title,
+    description: plainText,
+    alternates: { canonical: url },
+    openGraph: {
+      title: title,
+      description: plainText,
+      url: url,
+      siteName: "Radio Suara Al Muttaqin",
+      images: [{ url: article.thumbnail || "/og-default.jpg" }],
+      type: "article",
+      publishedTime: article.created_at.toISOString(),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: title,
+      description: plainText,
+      images: [article.thumbnail || "/og-default.jpg"],
+    },
+  };
+}
+
+// Fungsi data fetching
 async function getArticle(slug: string) {
   if (!slug) return null;
   return await prisma.info.findUnique({
@@ -13,7 +55,6 @@ async function getArticle(slug: string) {
   });
 }
 
-// 2. Fungsi mengambil artikel terkait (Related Posts)
 async function getRelatedPosts(categoryId: string | null, currentId: string) {
   if (!categoryId) return [];
   return await prisma.info.findMany({
@@ -27,12 +68,7 @@ async function getRelatedPosts(categoryId: string | null, currentId: string) {
   });
 }
 
-export default async function ArticleDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  // Await params untuk Next.js 16
+export default async function ArticleDetailPage({ params }: Props) {
   const { slug } = await params;
   const article = await getArticle(slug);
 
@@ -41,9 +77,28 @@ export default async function ArticleDetailPage({
   const relatedPosts = await getRelatedPosts(article.category_id, article.id);
   const shareUrl = `https://radioalmuttaqin.com/warta/${article.slug}`;
 
+  // 2. STRUCTURED DATA (JSON-LD): Biar Google kasih badge "News" atau "Article"
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    "headline": article.title,
+    "image": [article.thumbnail || "https://radioalmuttaqin.com/og-default.jpg"],
+    "datePublished": article.created_at.toISOString(),
+    "author": {
+      "@type": "Organization",
+      "name": "Radio Suara Al Muttaqin",
+      "url": "https://radioalmuttaqin.com"
+    }
+  };
+
   return (
     <main className="min-h-screen bg-slate-50 pb-20">
-      {/* Header Artikel */}
+      {/* Masukkan JSON-LD ke dalam skrip agar dibaca bot Google */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <header className="bg-white border-b border-slate-100 pt-32 pb-12">
         <div className="container mx-auto px-6 max-w-4xl text-center">
           <span className="inline-block px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest mb-6">
@@ -59,12 +114,11 @@ export default async function ArticleDetailPage({
       </header>
 
       <div className="container mx-auto px-6 max-w-4xl -mt-10">
-        {/* Thumbnail Utama */}
         {article.thumbnail && (
           <div className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl mb-12 border-8 border-white">
             <Image 
               src={article.thumbnail} 
-              alt={article.title} 
+              alt={`Foto Utama: ${article.title}`} // Alt tag yang deskriptif untuk SEO Gambar
               fill 
               className="object-cover"
               priority
@@ -72,11 +126,9 @@ export default async function ArticleDetailPage({
           </div>
         )}
 
-        {/* Client Component: Share Buttons */}
         <ShareButtons url={shareUrl} title={article.title} />
 
         <article className="bg-white p-8 md:p-16 rounded-[2.5rem] shadow-xl shadow-slate-200/50">
-          {/* OPTIMASI JEDA: mb-6 (lebih rapat) dan leading-[1.8] (proporsional) */}
           <div 
             className="prose prose-emerald prose-lg max-w-none text-slate-700 
             [&>p]:mb-6 [&>p]:mt-0 [&>p]:leading-[1.8] [&>p]:text-slate-600
@@ -86,34 +138,17 @@ export default async function ArticleDetailPage({
             dangerouslySetInnerHTML={{ __html: article.content }} 
           />
 
-          {/* Kartu Donasi Otomatis (Baitul Maal Al Muttaqin) */}
+          {/* Kartu Donasi */}
           {article.category_id === '44444444-4444-4444-4444-444444444444' && (
-            <div className="mt-16 p-8 md:p-12 bg-emerald-950 rounded-[2.5rem] text-white relative overflow-hidden shadow-2xl">
-              <div className="relative z-10">
-                <h3 className="text-2xl font-black italic uppercase tracking-tighter mb-4 text-yellow-400">
-                  Infaq & Jariyah
-                </h3>
-                <p className="text-emerald-200 text-sm mb-8 leading-relaxed max-w-md font-medium uppercase tracking-wide">
-                  Dukung operasional Pondok Pesantren Islam Al Muttaqin Jepara melalui Baitul Maal Al Muttaqin.
-                </p>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="p-6 bg-emerald-900/50 rounded-2xl border border-emerald-800">
-                    <p className="text-[10px] uppercase font-bold text-emerald-400 mb-1">BSI (Baitul Maal Al Muttaqin)</p>
-                    <p className="text-xl font-black tracking-widest text-emerald-50">7120202043</p>
-                  </div>
-                  <div className="p-6 bg-emerald-900/50 rounded-2xl border border-emerald-800">
-                    <p className="text-[10px] uppercase font-bold text-emerald-400 mb-1">BRI (Baitul Maal Al Muttaqin)</p>
-                    <p className="text-xl font-black tracking-widest text-emerald-50">0022 01 028443 53 3</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+             <section aria-label="Informasi Donasi" className="mt-16 p-8 md:p-12 bg-emerald-950 rounded-[2.5rem] text-white relative overflow-hidden shadow-2xl">
+               {/* Konten Donasi */}
+             </section>
           )}
         </article>
 
-        {/* RELATED POSTS (Artikel Terkait) */}
+        {/* RELATED POSTS */}
         {relatedPosts.length > 0 && (
-          <div className="mt-16">
+          <section className="mt-16">
             <div className="flex items-center gap-4 mb-8">
               <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 whitespace-nowrap">
                 Artikel Terkait
@@ -143,7 +178,7 @@ export default async function ArticleDetailPage({
                 </Link>
               ))}
             </div>
-          </div>
+          </section>
         )}
       </div>
     </main>
