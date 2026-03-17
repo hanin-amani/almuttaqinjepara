@@ -10,7 +10,11 @@ import RelatedPost from "@/components/RelatedPost";
 import CommentSection from "@/components/CommentSection";
 import Ads from "@/components/Ads";
 
-type Props = { params: Promise<{ slug: string }> };
+// ✅ Type Props yang benar untuk Next.js 15/16
+type Props = { 
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
 function readingTime(text: string) {
   const clean = text.replace(/<[^>]+>/g, "");
@@ -18,8 +22,12 @@ function readingTime(text: string) {
   return Math.ceil(words / 200);
 }
 
+/**
+ * GENERATE METADATA: SEO Friendly
+ */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug } = await params; // ✅ Await params adalah wajib
+  
   const article = await prisma.info.findUnique({ 
     where: { slug }, 
     include: { category: true } 
@@ -42,6 +50,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+/**
+ * DATA FETCHING
+ */
 async function getArticle(slug: string) {
   return prisma.info.findUnique({ 
     where: { 
@@ -65,8 +76,11 @@ async function getSidebarData() {
   return { popular };
 }
 
+/**
+ * MAIN PAGE COMPONENT
+ */
 export default async function ArticleDetailPage({ params }: Props) {
-  const { slug } = await params;
+  const { slug } = await params; // ✅ Await params
   const article = await getArticle(slug);
   
   if (!article) notFound();
@@ -106,30 +120,30 @@ export default async function ArticleDetailPage({ params }: Props) {
           </nav>
 
           {/* HEADER */}
-<header className="max-w-5xl mb-12">
-  <h1 className="text-3xl md:text-5xl font-black text-slate-900 leading-[1.1] mb-6 tracking-tight">
-    {article.title}
-  </h1>
-  <div className="flex items-center gap-3 text-slate-400 font-bold uppercase text-[10px] tracking-wider border-t border-slate-50 pt-5">
-    
-    {/* ✅ BAGIAN YANG DIUPDATE: Tambah Logo Icon */}
-    <div className="flex items-center gap-2">
-      <Image 
-        src="/icon.png" 
-        alt="Icon RSM" 
-        width={14} 
-        height={14} 
-        className="rounded-full shrink-0" 
-      />
-      <span className="text-emerald-600">Redaksi Al Muttaqin</span>
-    </div>
+          <header className="max-w-5xl mb-12">
+            <h1 className="text-3xl md:text-5xl font-black text-slate-900 leading-[1.1] mb-6 tracking-tight">
+              {article.title}
+            </h1>
+            <div className="flex items-center gap-3 text-slate-400 font-bold uppercase text-[10px] tracking-wider border-t border-slate-50 pt-5">
+              
+              {/* ✅ LOGO ICON SEBELUM REDAKSI */}
+              <div className="flex items-center gap-2">
+                <Image 
+                  src="/icon.png" 
+                  alt="Icon RSM" 
+                  width={14} 
+                  height={14} 
+                  className="rounded-full shrink-0" 
+                />
+                <span className="text-emerald-600">Redaksi Al Muttaqin</span>
+              </div>
 
-    <span className="text-slate-200">•</span>
-    <span>{new Date(article.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span>
-    <span className="text-slate-200">•</span>
-    <span>{readTime} Menit Baca</span>
-  </div>
-</header>
+              <span className="text-slate-200">•</span>
+              <span>{new Date(article.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span>
+              <span className="text-slate-200">•</span>
+              <span>{readTime} Menit Baca</span>
+            </div>
+          </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
             <div className="lg:col-span-8">
@@ -197,7 +211,6 @@ export default async function ArticleDetailPage({ params }: Props) {
                           )}
                         </div>
                         <div className="flex-1">
-                          {/* ✅ FIXED: Sidebar title tidak miring & tidak capital semua */}
                           <h5 className="text-[13px] font-black text-slate-800 leading-tight group-hover:text-emerald-600 transition-colors line-clamp-2 tracking-tight">
                             {item.title}
                           </h5>
