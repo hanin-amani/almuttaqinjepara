@@ -1,23 +1,29 @@
 import { PrismaClient } from "@prisma/client";
 
 /**
- * Mencegah instansi PrismaClient ganda saat hot-reloading di development.
+ * SINGLETON PRISMA: 
+ * Menghindari kebocoran koneksi database saat Hot-Reload di development
+ * dan membatasi koneksi di serverless production.
  */
+
 const prismaClientSingleton = () => {
   return new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    // Log query hanya di development agar tidak membebani server production
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 };
 
+// Menggunakan tipe data global agar TypeScript tidak komplain
 declare global {
-  var prismaGlobal: undefined | ReturnType<typeof prismaClientSingleton>;
+  var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
 }
 
-// Gunakan instansi yang sudah ada atau buat baru jika belum tersedia
-const prisma = globalThis.prismaGlobal ?? prismaClientSingleton();
+// Gunakan instansi yang sudah ada (global) atau buat baru
+const prisma = globalThis.prisma ?? prismaClientSingleton();
 
 export default prisma;
 
+// Simpan instansi ke global di mode development
 if (process.env.NODE_ENV !== "production") {
-  globalThis.prismaGlobal = prisma;
+  globalThis.prisma = prisma;
 }
