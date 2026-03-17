@@ -2,53 +2,44 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { ChevronRight, Newspaper } from "lucide-react";
 
 export default function InfoSection({ articles }: { articles: any[] }) {
-  // Jika tidak ada data, tampilkan pesan kosong agar layout tidak rusak
-  if (!articles || articles.length === 0) {
-    return (
-      <section className="py-20 bg-slate-50">
-        <div className="container mx-auto px-6 text-center">
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em]">
-            Belum ada warta terbaru saat ini.
-          </p>
-        </div>
-      </section>
-    );
-  }
+  if (!articles || articles.length === 0) return null;
 
   return (
-    <section className="py-24 bg-white relative overflow-hidden">
-      <div className="container mx-auto px-6 max-w-5xl relative z-10">
+    <section className="py-20 bg-white relative border-b border-slate-100">
+      <div className="max-w-7xl mx-auto px-6">
         
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-          <div className="text-left">
-            <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter text-slate-900 leading-none">
-              Warta <span className="text-emerald-600">Pondok</span>
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
+          <div className="text-left border-l-4 border-emerald-600 pl-5">
+            <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-slate-900 leading-none">
+              Kabar <span className="text-emerald-600">Pondok</span>
             </h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-3">
-              Kabar Terbaru & Materi Khutbah Al Muttaqin
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-2">
+              Update Literasi & Warta Al Muttaqin
             </p>
           </div>
+          
           <Link 
             href="/warta" 
-            className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-600 transition-all shadow-xl shadow-slate-100"
+            className="group flex items-center gap-2 px-6 py-3 bg-slate-900 text-white text-[9px] font-black uppercase tracking-[0.2em] rounded-[4px] hover:bg-emerald-600 transition-all shadow-lg"
           >
-            Lihat Semua Berita →
+            Lihat Semua <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
 
-        {/* Grid Kartu Warta */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* ✅ GRID 4 KOLOM: grid-cols-1 (HP), grid-cols-2 (Tablet), grid-cols-4 (Desktop) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {articles.map((item) => (
             <Link 
               key={item.id} 
               href={`/warta/${item.slug}`}
-              className="group flex flex-col bg-white rounded-[2rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-emerald-900/5 transition-all duration-500"
+              className="group flex flex-col bg-white rounded-[4px] overflow-hidden border border-slate-100 hover:border-emerald-500/30 shadow-sm hover:shadow-xl transition-all duration-500"
             >
-              {/* Thumbnail */}
-              <div className="relative aspect-video overflow-hidden">
+              {/* Thumbnail: Aspect Ratio diubah ke 4/3 agar lebih compact */}
+              <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
                 {item.thumbnail ? (
                   <Image 
                     src={item.thumbnail} 
@@ -57,39 +48,39 @@ export default function InfoSection({ articles }: { articles: any[] }) {
                     className="object-cover group-hover:scale-110 transition-transform duration-700"
                   />
                 ) : (
-                  <div className="w-full h-full bg-emerald-50 flex items-center justify-center text-emerald-200 font-black italic text-xs">
-                    AL MUTTAQIN
+                  <div className="w-full h-full flex items-center justify-center text-slate-200">
+                    <Newspaper size={24} />
                   </div>
                 )}
-                <div className="absolute top-4 left-4">
-                  <span className="px-3 py-1 bg-white/90 backdrop-blur-md rounded-full text-[8px] font-black uppercase tracking-widest text-emerald-700 shadow-sm">
+                
+                <div className="absolute top-3 left-3 z-20">
+                  <span className="px-2 py-1 bg-emerald-600 text-white text-[7px] font-black uppercase tracking-wider rounded-[2px]">
                     {item.category?.name || "Info"}
                   </span>
                 </div>
               </div>
 
-              {/* Konten Pendek */}
-              <div className="p-6 flex flex-col flex-1">
-                <time className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-                  {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+              {/* Konten: Font-size dikecilkan sedikit (text-base) agar pas di 4 kolom */}
+              <div className="p-5 flex flex-col flex-1 text-left">
+                <time className="text-[8px] font-bold text-slate-400 uppercase mb-2 block">
+                  {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                 </time>
-                <h3 className="text-lg font-black text-slate-900 leading-tight mb-4 group-hover:text-emerald-600 transition-colors uppercase italic tracking-tight line-clamp-2">
+
+                <h3 className="text-sm md:text-base font-black text-slate-900 leading-tight mb-4 group-hover:text-emerald-700 transition-colors uppercase italic line-clamp-2">
                   {item.title}
                 </h3>
+
                 <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600">
-                    Baca Selengkapnya
+                  <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600">
+                    Selengkapnya
                   </span>
-                  <span className="text-emerald-300 group-hover:translate-x-1 transition-transform">→</span>
+                  <ChevronRight size={12} className="text-emerald-300 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
             </Link>
           ))}
         </div>
       </div>
-
-      {/* Ornamen Background */}
-      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-50 rounded-full blur-3xl opacity-50"></div>
     </section>
   );
 }

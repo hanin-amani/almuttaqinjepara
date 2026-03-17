@@ -6,41 +6,54 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get("admin_session")?.value;
   const { pathname } = request.nextUrl;
 
-  // 1. Proteksi: Jika mencoba akses halaman admin tanpa token
-  if (pathname.startsWith("/admin") && !token) {
-    const loginUrl = new URL("/login", request.url);
-    // Simpan halaman tujuan asli agar setelah login bisa diarahkan balik
-    loginUrl.searchParams.set("from", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
+  // 1. PROTEKSI HALAMAN ADMIN (Kecuali halaman login admin itu sendiri)
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+    // Jika tidak ada token admin
+    if (!token) {
+      const loginUrl = new URL("/admin/login", request.url); // 👈 Larikan ke pintu khusus admin
+      loginUrl.searchParams.set("from", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
 
-  // 2. Validasi: Jika ada token, coba verifikasi keasliannya
-  if (pathname.startsWith("/admin") && token) {
+    // Jika ada token, verifikasi keasliannya
     try {
       const secret = new TextEncoder().encode(
         process.env.JWT_SECRET || "rsm-secret-key-123"
       );
       await jwtVerify(token, secret);
-      // Jika lolos verifikasi, izinkan masuk
       return NextResponse.next();
     } catch (error) {
-      // Jika token palsu atau expired, tendang balik ke login
-      console.error("Middleware Auth Error:", error);
-      const response = NextResponse.redirect(new URL("/login", request.url));
+      // Token palsu/expired, hapus cookie dan tendang ke login admin
+      const response = NextResponse.redirect(new URL("/admin/login", request.url));
       response.cookies.delete("admin_session");
       return response;
     }
   }
 
-  // 3. Jika admin yang sudah login mencoba akses halaman login lagi, arahkan ke dashboard
-  if (pathname === "/login" && token) {
-    return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+  // 2. CEK STATUS ADMIN DI HALAMAN LOGIN ADMIN
+  // Jika sudah login admin tapi iseng buka halaman login admin lagi
+  if (pathname === "/admin/login" && token) {
+    try {
+      const secret = new TextEncoder().encode(
+        process.env.JWT_SECRET || "rsm-secret-key-123"
+      );
+      await jwtVerify(token, secret);
+      return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+    } catch {
+      // Token tidak valid, biarkan di halaman login admin
+      return NextResponse.next();
+    }
   }
+
+  // 3. HALAMAN /login (PEMBACA) TETAP BEBAS
+  // Middleware ini tidak akan mengganggu NextAuth di halaman /login
+  // supaya pembaca tetap bisa login Google/Facebook dengan lancar.
 
   return NextResponse.next();
 }
 
-// Konfigurasi rute mana saja yang harus diawasi oleh middleware ini
+// Konfigurasi matcher
 export const config = {
-  matcher: ["/admin/:path*", "/login"],
+  // Kita pantau semua rute admin
+  matcher: ["/admin/:path*"],
 };

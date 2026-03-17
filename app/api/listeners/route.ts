@@ -2,20 +2,46 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const res = await fetch("https://rsm.my.id/api/station/salaam/listeners", {
-      headers: {
-        // Gunakan API Key dari Server Side (.env, bukan NEXT_PUBLIC)
-        "Authorization": `Bearer ${process.env.AZURACAST_API_KEY}`,
-        "Accept": "application/json"
-      },
-      next: { revalidate: 0 } // Jangan di-cache agar real-time
+
+    const res = await fetch(
+      "https://rsm.my.id/api/nowplaying/salaam",
+      {
+        headers: {
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!res.ok) {
+      console.warn("AZURACAST DOWN:", res.status);
+
+      return NextResponse.json({
+        current: 0,
+        unique: 0,
+        total: 0,
+        status: "offline",
+      });
+    }
+
+    const data = await res.json();
+
+    return NextResponse.json({
+      current: data.listeners?.current ?? 0,
+      unique: data.listeners?.unique ?? 0,
+      total: data.listeners?.total ?? 0,
+      status: "online",
     });
 
-    if (!res.ok) throw new Error("Gagal ambil data AzuraCast");
-    
-    const data = await res.json();
-    return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch listeners" }, { status: 500 });
+
+    console.warn("SERVER TIDAK BISA MENGHUBUNGI AZURACAST");
+
+    return NextResponse.json({
+      current: 0,
+      unique: 0,
+      total: 0,
+      status: "offline",
+    });
   }
 }

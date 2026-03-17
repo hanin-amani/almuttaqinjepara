@@ -1,121 +1,199 @@
 "use client";
 
-import { useState } from "react";
-import { createInfo } from "./actions";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import RichTextEditor from "./RichTextEditor";
 import ImageUpload from "./ImageUpload";
+import TagInput from "@/components/TagInput";
+import { Loader2, CheckCircle2, LayoutGrid, FileText, Image as ImageIcon, Tag, AlertCircle } from "lucide-react";
 
 export default function InfoForm() {
+  const router = useRouter();
   const [content, setContent] = useState("");
   const [thumbnail, setThumbnail] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // ✅ AMBIL KATEGORI ASLI DARI DATABASE
+  useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const res = await fetch("/api/categories");
+        const data = await res.json();
+        if (Array.isArray(data)) setCategories(data);
+      } catch (err) {
+        console.error("Gagal memuat kategori asli dari database.");
+      }
+    };
+    fetchCats();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const payload = {
+      title: formData.get("title"),
+      category_id: formData.get("category_id"),
+      status: formData.get("status"),
+      thumbnail,
+      content,
+      tags: tags.join(","),
+    };
+
+    try {
+      const res = await fetch("/api/info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        setSuccess(true);
+        // Redirect ke daftar warta setelah 2 detik
+        setTimeout(() => router.push("/admin/info"), 2000);
+      } else {
+        throw new Error(result.error || "Gagal menyimpan data.");
+      }
+    } catch (err: any) {
+      setError(err.message);
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <form
-      action={createInfo}
-      className="bg-white p-6 md:p-10 rounded-[2.5rem] border border-slate-100 shadow-xl space-y-8"
+      onSubmit={handleSubmit}
+      className="relative bg-white border border-slate-100 rounded-[4px] shadow-2xl p-6 md:p-10 space-y-8 overflow-hidden"
     >
-      {/* Header Info */}
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-xl shadow-lg shadow-emerald-100">
-          📝
+      {/* SUCCESS OVERLAY */}
+      {success && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-emerald-600/95 text-white animate-in fade-in duration-500">
+          <CheckCircle2 size={60} className="mb-4 animate-bounce" />
+          <h2 className="text-xl font-black uppercase tracking-[0.3em] italic">Warta Berhasil Terbit</h2>
+          <p className="text-xs text-emerald-100 mt-2 font-bold uppercase">Mengarahkan ke dashboard...</p>
         </div>
-        <div className="text-left">
-          <h2 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter">
-            Manajemen <span className="text-emerald-600">Warta Pondok</span>
-          </h2>
-          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-            Update berita terbaru Radio Suara Al Muttaqin
-          </p>
+      )}
+
+      {/* HEADER */}
+      <div className="flex items-center gap-4 border-b border-slate-50 pb-6 text-left">
+        <div className="w-10 h-10 bg-slate-900 text-emerald-400 flex items-center justify-center rounded-[4px]">
+          <FileText size={20} />
+        </div>
+        <div>
+          <h2 className="text-lg font-black text-slate-900 uppercase italic tracking-tight leading-none">Editor Warta Utama</h2>
+          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">RSM Media Center Al Muttaqin Jepara</p>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Kolom Judul & Kategori */}
-        <div className="space-y-5">
+      {/* ERROR ALERT */}
+      {error && (
+        <div className="bg-red-50 border border-red-100 p-4 rounded-[4px] flex items-center gap-3 text-red-600">
+          <AlertCircle size={18} />
+          <p className="text-[11px] font-bold uppercase tracking-wider">{error}</p>
+        </div>
+      )}
+
+      {/* GRID FORM */}
+      <div className="grid md:grid-cols-2 gap-8 text-left">
+        <div className="space-y-6">
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-2">
-              Judul Artikel
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2">
+               Judul Artikel
             </label>
             <input
               type="text"
               name="title"
-              placeholder="Masukkan judul artikel..."
-              className="w-full px-5 py-3.5 bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-2xl transition-all font-bold text-slate-800 outline-none"
+              placeholder="Contoh: Keutamaan Sedekah Subuh..."
               required
+              className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white p-3 rounded-[4px] font-bold text-slate-800 transition-all outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-2">
-              Kategori Berita
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2">
+              <LayoutGrid size={12} className="text-emerald-500" /> Kategori Berita
             </label>
             <select
               name="category_id"
-              className="w-full px-5 py-3.5 bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-2xl transition-all font-bold text-slate-600 outline-none cursor-pointer"
               required
+              className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white p-3 rounded-[4px] font-bold text-slate-600 transition-all outline-none cursor-pointer"
             >
-              <option value="">Pilih Kategori...</option>
-              <option value="11111111-1111-1111-1111-111111111111">Artikel Umum</option>
-              <option value="22222222-2222-2222-2222-222222222222">Kabar Pondok</option>
-              <option value="33333333-3333-3333-3333-333333333333">Materi Khutbah</option>
-              <option value="44444444-4444-4444-4444-444444444444">Info Donasi</option>
-              <option value="55555555-5555-5555-5555-555555555555">Kegiatan Santri</option>
+              <option value="">Pilih Kategori Asli...</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
             </select>
           </div>
         </div>
 
-        {/* Kolom Media & Status */}
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-2">
-              Thumbnail Utama
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2">
+              <ImageIcon size={12} className="text-emerald-500" /> Gambar Cover
             </label>
             <ImageUpload onUpload={(url) => setThumbnail(url)} />
-            <input type="hidden" name="thumbnail" value={thumbnail} />
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">
               Status Publikasi
             </label>
-            <select 
-              name="status" 
-              className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl font-bold text-slate-600 outline-none"
+            <select
+              name="status"
+              className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white p-3 rounded-[4px] font-bold text-slate-600 transition-all outline-none"
             >
-              <option value="publish">Diterbitkan (Live)</option>
+              <option value="published">Siap Terbitkan (Live)</option>
               <option value="draft">Simpan sebagai Draft</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* AREA EDITOR ANTI-MOLOR */}
-      <div className="space-y-3">
-        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">
-          Isi Artikel Lengkap
+      {/* TAGS AREA */}
+      <div className="space-y-3 pt-2 text-left">
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2">
+          <Tag size={12} className="text-emerald-500" /> Kata Kunci (SEO)
         </label>
-        
-        <div className="quill-modern-container">
-          <RichTextEditor
-            content={content}
-            onChange={setContent}
-          />
-        </div>
-
-        <input type="hidden" name="content" value={content} />
+        <TagInput tags={tags} setTags={setTags} />
       </div>
 
-      {/* Tombol Simpan */}
-      <div className="pt-6 border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6">
-        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center md:text-left leading-relaxed">
-          PENTING: Pastikan data rekening donasi sudah benar <br/> 
-          (BSI 7120202043 & BRI 0022 01 028443 53 3).
+      {/* EDITOR AREA */}
+      <div className="space-y-4 border-t border-slate-50 pt-8 text-left">
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">
+          Isi Artikel Lengkap
+        </label>
+        <div className="border border-slate-200 rounded-[4px] overflow-hidden bg-white shadow-inner min-h-[400px]">
+          <RichTextEditor content={content} onChange={setContent} />
+        </div>
+      </div>
+
+      {/* ACTION BUTTON */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6 border-t border-slate-50">
+        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest max-w-xs text-left leading-relaxed">
+          Pastikan konten sudah diperiksa kembali sebelum diterbitkan ke publik.
         </p>
-        <button 
+        
+        <button
           type="submit"
-          className="w-full md:w-auto bg-yellow-400 hover:bg-yellow-300 text-emerald-950 px-12 py-5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-yellow-100 active:scale-95 transform hover:-translate-y-1"
+          disabled={isSubmitting}
+          className="w-full md:w-auto min-w-[280px] bg-slate-900 hover:bg-emerald-600 text-white py-5 px-10 rounded-[4px] font-black uppercase tracking-[0.2em] text-[11px] transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
         >
-          Simpan & Publikasikan
+          {isSubmitting ? (
+            <>
+              <Loader2 className="animate-spin" size={16} />
+              Menyimpan Data...
+            </>
+          ) : (
+            "Simpan & Publikasikan Warta"
+          )}
         </button>
       </div>
     </form>

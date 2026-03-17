@@ -1,25 +1,35 @@
 import prisma from "@/lib/prisma";
 import Hero from "@/components/Hero";
 import LiveSection from "@/components/LiveSection";
-import ScheduleSection from "@/components/ScheduleSection"; 
 import InfoSection from "@/components/InfoSection"; 
 
-// 2. Import komponen dari wrapper client
-import { LiveChat, DonasiSection } from "@/components/ClientSections"; 
+// 1. Panggil komponen gabungan baru (Double Lane)
+import RadioInteractionHub from "@/components/RadioInteractionHub";
+// 2. Tetap panggil DonasiSection dari wrapper client
+import { DonasiSection } from "@/components/ClientSections"; 
 
-/**
- * HOMEPAGE RADIO SUARA AL MUTTAQIN
- * Optimasi: ISR (60 detik) untuk kecepatan maksimal
- */
 export const revalidate = 60; 
 
 async function getLatestWarta() {
-  return await prisma.info.findMany({
-    where: { status: "publish", is_active: true },
-    orderBy: { created_at: "desc" },
-    take: 3,
-    include: { category: true }
-  });
+  try {
+    return await prisma.info.findMany({
+      where: { 
+        // ✅ GANTI DISINI: Gunakan OR agar status "publish" atau "published" tetap kena gank
+        OR: [
+          { status: "published" },
+          { status: "publish" }
+        ],
+        // ✅ PASTIKAN INI: Jika di schema ada is_active, pastikan nilainya true
+        is_active: true 
+      }, 
+      orderBy: { created_at: "desc" },
+      take: 4,
+      include: { category: true }
+    });
+  } catch (error) {
+    console.error("Gagal farming data warta:", error);
+    return []; // Return array kosong jika error agar tidak crash
+  }
 }
 
 export default async function Home() {
@@ -27,14 +37,15 @@ export default async function Home() {
 
   return (
     <main className="relative min-h-screen bg-white">
-      {/* Hero & LiveSection tetap di server untuk LCP cepat */}
+      {/* 🚀 LAYER 1: Hero & Player */}
       <Hero />
       <LiveSection />
 
-      {/* Komponen interaktif dimuat secara dinamis di client */}
-      <LiveChat />
+      {/* 🚀 LAYER 2: Jadwal & Live Chat (Sejajar) */}
+      <RadioInteractionHub />
 
-      <ScheduleSection /> 
+      {/* 🚀 LAYER 3: Berita & Donasi */}
+      {/* Jika data ada, tampilkan. Jika kosong, InfoSection harus punya handle empty state */}
       <InfoSection articles={latestWarta} />
       
       <DonasiSection 

@@ -1,104 +1,138 @@
 @import "tailwindcss";
 
+/* =========================
+   ROOT VARIABLES
+========================= */
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  
-  /* Identitas Visual Emerald - Radio Suara Al Muttaqin */
-  --color-emerald-50: #ecfdf5;
-  --color-emerald-100: #d1fae5;
-  --color-emerald-200: #a7f3d0;
-  --color-emerald-400: #34d399;
-  --color-emerald-500: #10b981;
-  --color-emerald-600: #059669;
-  --color-emerald-900: #064e3b;
-  --color-emerald-950: #022c22;
-  
-  /* Aksen Kuning Jariyah - Pondok Pesantren Islam Al Muttaqin Jepara */
-  --color-yellow-400: #facc15;
-  --color-yellow-500: #eab308;
+
+  /* Brand Color Radio Suara Al Muttaqin */
+  --emerald-500: #10b981;
+  --emerald-600: #059669;
+  --emerald-950: #022c22;
+
+  --yellow-400: #facc15;
+
+  /* Radius konsisten */
+  --radius: 4px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* =========================
+   BASE RESET
+========================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Dipaksa tetap putih sesuai permintaan antum untuk menjaga kontras */
-    --background: #ffffff; 
-    --foreground: #171717;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-  @apply antialiased scroll-smooth;
+
+  font-family: var(--font-geist-sans), system-ui, Arial, sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* --- LAYER COMPONENTS: MODERN & CLEAN --- */
-@layer components {
+/* =========================
+   GLOBAL ELEMENT STYLE
+========================= */
 
-  /* 1. KONTROL INPUT FORM */
-  input[type="text"], select, textarea {
-    @apply outline-none transition-all duration-300 border-2 border-transparent focus:border-emerald-500;
-  }
-
-  /* 2. CUSTOM SCROLLBAR (Thin & Minimalist) */
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px; 
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-transparent; 
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    /* Emerald transparan agar elegan */
-    @apply bg-emerald-500/20 rounded-full border-2 border-white hover:bg-emerald-500/50 transition-colors duration-300;
-  }
-
-  /* 3. TIPTAP EDITOR STYLING (Pengganti Quill) */
-  .tiptap {
-    @apply min-h-full outline-none;
-  }
-
-  /* Placeholder Tiptap (Modern & Clean) */
-  .tiptap p.is-editor-empty:first-child::before {
-    @apply text-slate-300 font-medium float-left h-0 pointer-events-none;
-    content: attr(data-placeholder);
-  }
-
-  /* Styling Heading & List di dalam Editor agar terlihat profesional */
-  .tiptap h2 {
-    @apply text-2xl font-black text-emerald-950 mb-4 mt-6 uppercase italic tracking-tight;
-  }
-  .tiptap h3 {
-    @apply text-xl font-black text-emerald-900 mb-3 mt-5;
-  }
-  .tiptap ul {
-    @apply list-disc list-inside mb-4 space-y-1 text-slate-700;
-  }
-  .tiptap ol {
-    @apply list-decimal list-inside mb-4 space-y-1 text-slate-700;
-  }
+img,
+video {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 
-/* --- LAYER UTILITIES: ANIMATIONS & PERFORMANCE --- */
-@layer utilities {
-  /* ANIMASI VISUALIZER (Optimasi GPU dengan Will-Change) */
-  @keyframes visualizer {
-    0%, 100% { height: 15%; opacity: 0.3; transform: scaleY(1); }
-    50% { height: 100%; opacity: 1; transform: scaleY(1.2); }
-  }
+button,
+input,
+select,
+textarea {
+  border-radius: var(--radius);
+  font: inherit;
+}
 
-  .animate-visualizer {
-    animation: visualizer 0.8s ease-in-out infinite;
-    /* Memberitahu browser untuk menyiapkan akselerasi hardware */
-    will-change: height, opacity, transform; 
-    transform-origin: bottom;
-  }
+/* =========================
+   FORM STYLE
+========================= */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  @apply outline-none border border-slate-200 bg-slate-50 px-3 py-2 transition-all;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  @apply border-emerald-500 ring-2 ring-emerald-500/20;
+}
+
+/* =========================
+   TIPTAP EDITOR
+========================= */
+
+.tiptap {
+  @apply min-h-[300px] p-6 bg-white outline-none;
+}
+
+.tiptap p {
+  @apply mb-4 leading-relaxed;
+}
+
+.tiptap h2 {
+  @apply text-2xl font-bold mt-8 mb-4;
+}
+
+.tiptap ul {
+  @apply list-disc pl-6;
+}
+
+/* =========================
+   ARTICLE PROSE IMPROVEMENT
+========================= */
+
+.prose img {
+  @apply my-10;
+}
+
+.prose h2 {
+  scroll-margin-top: 120px;
+}
+
+.prose p {
+  @apply leading-relaxed;
+}
+
+/* =========================
+   SCROLLBAR (MODERN)
+========================= */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5f5;
+  border-radius: 20px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

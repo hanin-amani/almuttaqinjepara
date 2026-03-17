@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // Ditambahkan untuk bypass connection pooler saat migrasi
+  directUrl = env("DIRECT_URL")
   schemas   = ["public"]
 }
 
@@ -38,7 +38,6 @@ model SongRequest {
   @@schema("public")
 }
 
-// MODEL BARU: LIVE CHAT JAMAAH
 model ChatMessage {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   username   String
@@ -54,62 +53,160 @@ model ChatMessage {
 /////////////////////////////////////////////////////
 
 model Info {
-  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title       String
-  slug        String        @unique
+  slug        String   @unique
   excerpt     String?
-  content     String
+  content     String   @db.Text
   thumbnail   String?
-  status      String        @default("publish")
-  is_active   Boolean       @default(true)
   
-  // Perbaikan tipe data agar sesuai dengan model referensinya (@db.Uuid)
-  category_id String?       @db.Uuid
-  author_id   String?       @db.Uuid
+  // ✅ TAMBAHAN: Untuk menyimpan kata kunci (comma separated string)
+  tags        String?
 
-  created_at  DateTime      @default(now())
-  updated_at  DateTime      @updatedAt
+  status      String   @default("published")
+  is_active   Boolean  @default(true)
 
-  // Hubungan ke Category
-  category    InfoCategory? @relation(fields: [category_id], references: [id])
+  category_id String?  @db.Uuid
+  author_id   String?  @db.Uuid
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  category    InfoCategory? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  author      Profile?      @relation("AuthorInfo", fields: [author_id], references: [id], onDelete: SetNull)
   
-  // Hubungan ke Profile (Author)
-  author      Profile?      @relation("AuthorInfo", fields: [author_id], references: [id])
+  comments    Comment[]
 
+  @@index([slug])
+  @@index([category_id])
   @@map("infos")
   @@schema("public")
 }
 
 model InfoCategory {
-  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name  String
-  slug  String @unique
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  slug       String   @unique
+  created_at DateTime @default(now())
 
-  infos Info[]
+  infos      Info[]
 
+  @@index([slug])
   @@map("info_categories")
   @@schema("public")
 }
 
 /////////////////////////////////////////////////////
-// ADMIN LOGIN
+// SISTEM KOMENTAR (SUARA PEMBACA)
 /////////////////////////////////////////////////////
 
-model Admin {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email       String    @unique
-  password    String
-  role        String    @default("admin")
-  last_login  DateTime?
-  created_at  DateTime  @default(now())
+model Comment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  email       String   
+  website     String?  
+  image       String?  // ✅ TAMBAHKAN INI: Untuk menyimpan URL Avatar/Foto Profil
+  content     String   @db.Text
+  info_id     String   @db.Uuid
+  is_approved Boolean  @default(true)
+  
+  // Relasi ke User (Jika login)
+  user_id     String?  @db.Uuid
+  user        User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
 
-  @@map("admins")
+  // ✅ SISTEM BALASAN (Self-Relation)
+  parent_id   String?   @db.Uuid
+  parent      Comment?  @relation("CommentReplies", fields: [parent_id], references: [id], onDelete: Cascade)
+  replies     Comment[] @relation("CommentReplies")
+
+  // Relasi ke Artikel/Warta
+  info        Info      @relation(fields: [info_id], references: [id], onDelete: Cascade)
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@index([info_id])
+  @@index([parent_id])
+  @@map("comments")
   @@schema("public")
 }
 
 /////////////////////////////////////////////////////
-// STATISTIK PENDENGAR RADIO
+// AUTHENTICATION (NEXT-AUTH MODELS)
 /////////////////////////////////////////////////////
+
+model User {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  
+  accounts      Account[]
+  sessions      Session[]
+  comments      Comment[]
+
+  @@map("users")
+  @@schema("public")
+}
+
+model Account {
+  id                 String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String  @db.Uuid
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+  @@schema("public")
+}
+
+model Session {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionToken String   @unique
+  userId       String   @db.Uuid
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@schema("public")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+  @@schema("public")
+}
+
+/////////////////////////////////////////////////////
+// ADMIN & STATISTIK
+/////////////////////////////////////////////////////
+
+model Admin {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String   @unique
+  password    String
+  role        String   @default("admin")
+  last_login  DateTime?
+  created_at  DateTime @default(now())
+
+  @@map("admins")
+  @@schema("public")
+}
 
 model Listener {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -119,16 +216,12 @@ model Listener {
   @@schema("public")
 }
 
-/////////////////////////////////////////////////////
-// PROFIL PENYIAR / AUTHOR
-/////////////////////////////////////////////////////
-
 model Profile {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   role       String   @default("penyiar")
   created_at DateTime @default(now())
 
-  infos Info[] @relation("AuthorInfo")
+  infos      Info[] @relation("AuthorInfo")
 
   @@map("profiles")
   @@schema("public")

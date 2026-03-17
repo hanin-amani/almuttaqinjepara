@@ -1,32 +1,54 @@
-import type { MetadataRoute } from "next"
+import { MetadataRoute } from 'next';
+import prisma from "@/lib/prisma";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://radio-suara-al-muttaqin.vercel.app"
+/**
+ * GENERATE DYNAMIC SITEMAP
+ * Membantu Google mengindeks halaman statis dan seluruh artikel Warta Pondok secara otomatis.
+ */
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const baseUrl = 'https://almuttaqinjepara.vercel.app'; // Domain utama antum
 
-  return [
+  // 1. Ambil seluruh slug artikel yang sudah diterbitkan (publish)
+  const articles = await prisma.info.findMany({
+    where: { 
+      status: "publish",
+      is_active: true 
+    },
+    select: {
+      slug: true,
+      updated_at: true,
+    },
+  });
+
+  // 2. Petakan artikel ke format sitemap
+  const articleUrls = articles.map((article) => ({
+    url: `${baseUrl}/warta/${article.slug}`,
+    lastModified: article.updated_at,
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }));
+
+  // 3. Daftar Halaman Statis Utama
+  const staticPaths = [
     {
       url: baseUrl,
       lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 1,
+      changeFrequency: 'daily' as const,
+      priority: 1.0, // Halaman utama adalah prioritas tertinggi
     },
     {
       url: `${baseUrl}/jadwal`,
       lastModified: new Date(),
-      changeFrequency: "weekly",
+      changeFrequency: 'weekly' as const,
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/request`,
+      url: `${baseUrl}/request-lagu`,
       lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.7,
+      changeFrequency: 'monthly' as const,
+      priority: 0.5,
     },
-    {
-      url: `${baseUrl}/donasi`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
-  ]
+  ];
+
+  return [...staticPaths, ...articleUrls];
 }
