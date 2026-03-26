@@ -2,16 +2,22 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createInfo } from "@/app/admin/info/actions"; // ✅ Gunakan Server Action yang sudah kita perbaiki
+import { createInfo } from "@/app/admin/info/actions"; 
 import RichTextEditor from "./RichTextEditor";
 import TagInput from "@/components/TagInput";
 import { 
   Loader2, CheckCircle2, LayoutGrid, FileText, 
-  Image as ImageIcon, Tag, AlertCircle, Upload 
+  Image as ImageIcon, Tag, AlertCircle, Upload, Link as LinkIcon, Lock, Unlock 
 } from "lucide-react";
 
 export default function InfoForm() {
   const router = useRouter();
+  
+  // ✅ STATE BARU: Judul & Slug
+  const [title, setTitle] = useState(""); 
+  const [slug, setSlug] = useState("");   
+  const [isSlugLocked, setIsSlugLocked] = useState(true); 
+
   const [content, setContent] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -19,11 +25,26 @@ export default function InfoForm() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // State untuk Preview Gambar
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ✅ AMBIL KATEGORI DARI API
+  // ✅ LOGIKA GENERATOR SLUG
+  const generateSlug = (text: string) => {
+    return text
+      .toLowerCase()
+      .replace(/\s+/g, "-")           // Spasi jadi strip
+      .replace(/[^\w-]+/g, "")       // Hapus simbol aneh
+      .replace(/--+/g, "-")          // Hapus strip ganda
+      .trim();
+  };
+
+  // ✅ EFFECT: Update Slug otomatis saat judul diketik (jika terkunci)
+  useEffect(() => {
+    if (isSlugLocked) {
+      setSlug(generateSlug(title));
+    }
+  }, [title, isSlugLocked]);
+
   useEffect(() => {
     const fetchCats = async () => {
       try {
@@ -37,7 +58,6 @@ export default function InfoForm() {
     fetchCats();
   }, []);
 
-  // Handle Preview Gambar
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -45,17 +65,16 @@ export default function InfoForm() {
     }
   };
 
-  // ✅ HANDLER SUBMIT (Savage Logic)
   const clientAction = async (formData: FormData) => {
     setIsSubmitting(true);
     setError(null);
 
-    // Masukkan data manual (RichText & Tags) ke FormData
+    // ✅ Tambahkan data manual ke FormData
     formData.append("content", content);
     formData.append("tags", tags.join(","));
+    formData.append("slug", slug); // Kirim slug hasil generate/edit manual
 
     try {
-      // Panggil Server Action
       await createInfo(formData);
       setSuccess(true);
       setTimeout(() => router.push("/admin/info"), 2000);
@@ -70,7 +89,6 @@ export default function InfoForm() {
       action={clientAction}
       className="relative bg-white border border-slate-100 rounded-[4px] shadow-2xl p-6 md:p-10 space-y-8 overflow-hidden"
     >
-      {/* SUCCESS OVERLAY */}
       {success && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-emerald-600/95 text-white animate-in fade-in duration-500">
           <CheckCircle2 size={60} className="mb-4 animate-bounce" />
@@ -90,7 +108,6 @@ export default function InfoForm() {
         </div>
       </div>
 
-      {/* ERROR ALERT */}
       {error && (
         <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-[4px] flex items-center gap-3 text-red-600 animate-in slide-in-from-top-2">
           <AlertCircle size={18} />
@@ -101,7 +118,7 @@ export default function InfoForm() {
       {/* GRID FORM */}
       <div className="grid md:grid-cols-2 gap-10 text-left">
         <div className="space-y-8">
-          {/* JUDUL */}
+          {/* JUDUL ARTIKEL */}
           <div className="group">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2 group-focus-within:text-emerald-600 transition-colors">
                Judul Artikel Berita
@@ -109,10 +126,38 @@ export default function InfoForm() {
             <input
               type="text"
               name="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="Masukkan judul yang menarik..."
               required
               className="w-full bg-slate-50 border-2 border-slate-50 focus:border-emerald-500 focus:bg-white p-4 rounded-[4px] font-bold text-slate-800 transition-all outline-none shadow-sm"
             />
+          </div>
+
+          {/* ✅ AUTO-SLUG FIELD (The "Premium" Touch) */}
+          <div>
+            <div className="flex justify-between items-center mb-3">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <LinkIcon size={12} className="text-emerald-500" /> URL / Slug Berita
+              </label>
+              <button 
+                type="button" 
+                onClick={() => setIsSlugLocked(!isSlugLocked)}
+                className={`text-[9px] font-black uppercase px-2 py-1 rounded flex items-center gap-1 transition-all ${isSlugLocked ? 'bg-slate-100 text-slate-400' : 'bg-amber-100 text-amber-600'}`}
+              >
+                {isSlugLocked ? <><Lock size={10} /> Terkunci</> : <><Unlock size={10} /> Edit Manual</>}
+              </button>
+            </div>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-[11px]">/warta/</span>
+              <input
+                type="text"
+                value={slug}
+                readOnly={isSlugLocked}
+                onChange={(e) => setSlug(generateSlug(e.target.value))}
+                className={`w-full bg-slate-50 border-2 ${isSlugLocked ? 'border-transparent text-slate-400' : 'border-amber-400 bg-white text-slate-800'} p-4 pl-16 rounded-[4px] font-bold text-xs transition-all outline-none shadow-sm`}
+              />
+            </div>
           </div>
 
           {/* KATEGORI */}
@@ -139,25 +184,23 @@ export default function InfoForm() {
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
               <ImageIcon size={12} className="text-emerald-500" /> Gambar Cover Berita
             </label>
-            
             <div 
               onClick={() => fileInputRef.current?.click()}
               className="relative w-full aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-[4px] flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/50 transition-all overflow-hidden group shadow-inner"
             >
               <input 
                 type="file" 
-                name="thumbnailFile" // ✅ Nama ini harus sama dengan yang ada di actions.ts
+                name="thumbnailFile" 
                 ref={fileInputRef}
                 className="hidden" 
                 accept="image/*"
                 onChange={handleFileChange}
               />
-              
               {previewUrl ? (
                 <>
                   <img src={previewUrl} alt="Preview" className="w-full h-full object-cover animate-in fade-in duration-500" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                    <Upload className="text-white" size={30} />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all text-white font-black text-[10px] uppercase">
+                    <Upload size={24} className="mb-2" /> Ganti Foto
                   </div>
                 </>
               ) : (
@@ -210,7 +253,7 @@ export default function InfoForm() {
               <CheckCircle2 size={20} />
            </div>
            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest max-w-[200px] leading-relaxed">
-             Konten akan otomatis dioptimasi untuk mesin pencari (SEO).
+             URL dan Metadata akan otomatis dioptimasi untuk mesin pencari.
            </p>
         </div>
         
