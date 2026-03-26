@@ -5,14 +5,15 @@ import { updateInfo } from "../../actions";
 import RichTextEditor from "../../RichTextEditor";
 import { 
   ArrowLeft, Save, ImageIcon, Upload, X, RefreshCcw, 
-  Link as LinkIcon, Lock, Unlock 
+  Link as LinkIcon, Lock, Unlock, CheckCircle2, Loader2 
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface InfoData {
   id: string;
   title: string;
-  slug: string; // ✅ Tambahkan slug di interface
+  slug: string;
   content: string;
   thumbnail?: string | null;
   status: string;
@@ -20,14 +21,17 @@ interface InfoData {
 }
 
 export default function EditInfoForm({ data }: { data: InfoData }) {
-  // ✅ STATE UNTUK AUTO-SLUG
+  const router = useRouter();
+  
+  // ✅ STATE UTAMA (Auto-Slug Logic)
   const [title, setTitle] = useState(data.title);
   const [slug, setSlug] = useState(data.slug);
-  const [isSlugLocked, setIsSlugLocked] = useState(true); // Default Locked di halaman Edit
+  const [isSlugLocked, setIsSlugLocked] = useState(true); 
 
   const [content, setContent] = useState(data.content);
   const [previewUrl, setPreviewUrl] = useState(data.thumbnail || "");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ✅ FUNGSI GENERATOR SLUG
@@ -40,13 +44,14 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
       .trim();
   };
 
-  // ✅ EFFECT: Pantau judul, jika unlocked maka ikuti judul
+  // ✅ EFFECT: Sync Slug saat judul berubah (jika Unlocked)
   useEffect(() => {
     if (!isSlugLocked) {
       setSlug(generateSlug(title));
     }
   }, [title, isSlugLocked]);
 
+  // ✅ CLEANUP: Revoke URL object untuk cegah memory leak
   useEffect(() => {
     return () => {
       if (previewUrl && previewUrl.startsWith("blob:")) {
@@ -69,9 +74,40 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  /**
+   * CLIENT ACTION: Membungkus Server Action untuk feedback UI
+   */
+  const clientAction = async (formData: FormData) => {
+    setLoading(true);
+    
+    // Pastikan data state terbaru ikut terkirim
+    formData.append("content", content);
+    formData.append("slug", slug);
+
+    try {
+      await updateInfo(formData);
+      setSuccess(true);
+      // Redirect setelah 2 detik agar admin bisa lihat notifikasi sukses
+      setTimeout(() => router.push("/admin/info"), 2000);
+    } catch (err) {
+      console.error("Gagal simpan:", err);
+      setLoading(false);
+      alert("Waduh, gagal simpan perubahan. Cek koneksi database!");
+    }
+  };
+
   return (
-    <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl shadow-emerald-900/5 border border-slate-100 mb-12 relative overflow-hidden text-left">
+    <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl shadow-emerald-900/5 border border-slate-100 mb-12 relative overflow-hidden text-left font-sans">
       <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
+
+      {/* ✅ SUCCESS OVERLAY (Savage Feedback) */}
+      {success && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-emerald-600/95 text-white animate-in fade-in duration-500">
+          <CheckCircle2 size={60} className="mb-4 animate-bounce" />
+          <h2 className="text-xl font-black uppercase tracking-[0.3em] italic">Perubahan Tersimpan!</h2>
+          <p className="text-xs text-emerald-100 mt-2 font-bold uppercase tracking-widest">Sinkronisasi data berhasil...</p>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 relative z-10">
@@ -87,19 +123,15 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
         </Link>
       </div>
 
-      <form action={updateInfo} onSubmit={() => setLoading(true)} className="space-y-8 relative z-10">
-        {/* DATA HIDDEN */}
+      <form action={clientAction} className="space-y-8 relative z-10">
         <input type="hidden" name="id" value={data.id} />
-        <input type="hidden" name="content" value={content} />
         <input type="hidden" name="oldThumbnail" value={data.thumbnail || ""} />
-        {/* ✅ Kirim slug ke Server Action */}
-        <input type="hidden" name="slug" value={slug} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-5 space-y-8">
-            {/* Judul Warta */}
+            {/* Judul */}
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest ml-1">Judul Warta Utama</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest ml-1 text-left">Judul Warta Utama</label>
               <input 
                 name="title" 
                 value={title}
@@ -138,8 +170,7 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              {/* Kategori */}
+            <div className="grid grid-cols-2 gap-6 text-left">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest ml-1">Kategori</label>
                 <select 
@@ -152,8 +183,6 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
                   <option value="44444444-4444-4444-4444-444444444444">💰 Info Donasi</option>
                 </select>
               </div>
-
-              {/* Status */}
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest ml-1">Status</label>
                 <select 
@@ -168,7 +197,7 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
             </div>
 
             {/* UPLOAD GAMBAR */}
-            <div>
+            <div className="text-left">
               <div className="flex justify-between items-center mb-3 ml-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gambar Utama</label>
                 {previewUrl !== data.thumbnail && (
@@ -198,7 +227,7 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
           </div>
 
           {/* EDITOR KONTEN */}
-          <div className="lg:col-span-7 flex flex-col">
+          <div className="lg:col-span-7 flex flex-col text-left">
             <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest ml-1">Isi Warta / Konten Utama</label>
             <div className="flex-1 bg-slate-50 rounded-[2rem] border border-slate-100 overflow-hidden focus-within:ring-4 focus-within:ring-emerald-100 transition-all min-h-[500px] shadow-inner">
               <RichTextEditor content={content} onChange={setContent} />
@@ -213,7 +242,7 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
             disabled={loading} 
             className="w-full py-6 bg-emerald-950 text-white rounded-[2rem] font-black text-[12px] uppercase tracking-[0.3em] hover:bg-emerald-900 shadow-2xl active:scale-[0.98] transition-all disabled:bg-slate-300 flex items-center justify-center gap-3"
           >
-            {loading ? <div className="w-5 h-5 border-3 border-white/20 border-t-white rounded-full animate-spin"></div> : <><Save size={18} className="text-emerald-400" /> SIMPAN PERUBAHAN 💾</>}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save size={18} className="text-emerald-400" /> SIMPAN PERUBAHAN 💾</>}
           </button>
         </div>
       </form>

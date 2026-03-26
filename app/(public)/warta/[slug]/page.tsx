@@ -10,12 +10,18 @@ import RelatedPost from "@/components/RelatedPost";
 import CommentSection from "@/components/CommentSection";
 import Ads from "@/components/Ads";
 
-// ✅ Type Props yang benar untuk Next.js 15/16
-type Props = { 
+/**
+ * TYPE DEFINITION
+ * Di Next.js 15/16, params dan searchParams WAJIB berupa Promise.
+ */
+type Props = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
+/**
+ * HELPER: Menghitung estimasi waktu baca
+ */
 function readingTime(text: string) {
   const clean = text.replace(/<[^>]+>/g, "");
   const words = clean.split(/\s+/).length;
@@ -23,17 +29,17 @@ function readingTime(text: string) {
 }
 
 /**
- * GENERATE METADATA: SEO Friendly
+ * GENERATE METADATA: SEO & Social Media Preview
  */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params; // ✅ Await params adalah wajib
+  const { slug } = await params; // ✅ Await params adalah kunci anti-error Digest
   
   const article = await prisma.info.findUnique({ 
     where: { slug }, 
     include: { category: true } 
   });
   
-  if (!article) return { title: "Artikel Tidak Ditemukan" };
+  if (!article) return { title: "Artikel Tidak Ditemukan | Radio RSM" };
   
   const plainText = article.content.replace(/<[^>]+>/g, "").slice(0, 160);
   
@@ -47,11 +53,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: [{ url: article.thumbnail || "/og-default.jpg" }], 
       type: "article" 
     },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description: plainText,
+      images: [article.thumbnail || "/og-default.jpg"],
+    }
   };
 }
 
 /**
- * DATA FETCHING
+ * DATA FETCHING: Mengambil Detail Artikel
  */
 async function getArticle(slug: string) {
   return prisma.info.findUnique({ 
@@ -64,8 +76,11 @@ async function getArticle(slug: string) {
   });
 }
 
+/**
+ * DATA FETCHING: Mengambil Data Sidebar (Populer)
+ */
 async function getSidebarData() {
-  const popular = await prisma.info.findMany({
+  return prisma.info.findMany({
     where: { 
       status: { in: ["publish", "published"] }, 
       is_active: true 
@@ -73,22 +88,28 @@ async function getSidebarData() {
     take: 5,
     orderBy: { created_at: "desc" },
   });
-  return { popular };
 }
 
 /**
  * MAIN PAGE COMPONENT
  */
-export default async function ArticleDetailPage({ params }: Props) {
-  const { slug } = await params; // ✅ Await params
-  const article = await getArticle(slug);
+export default async function ArticleDetailPage({ params, searchParams }: Props) {
+  // ✅ 1. Await semua dynamic params di awal untuk mencegah Server-side Exception
+  const { slug } = await params;
+  const sParams = await searchParams; // Walau belum dipakai, await searchParams menjaga stabilitas build
+  
+  // ✅ 2. Fetch data secara paralel untuk performa lebih kencang
+  const [article, popular] = await Promise.all([
+    getArticle(slug),
+    getSidebarData()
+  ]);
   
   if (!article) notFound();
 
-  const { popular } = await getSidebarData();
   const readTime = readingTime(article.content);
   const shareUrl = "https://radioalmuttaqin.com/warta/" + article.slug;
 
+  // ✅ 3. Logika Pemecahan Konten untuk Iklan (Ads)
   const content = article.content;
   const splitIndex = content.indexOf("</p>");
   
@@ -126,7 +147,6 @@ export default async function ArticleDetailPage({ params }: Props) {
             </h1>
             <div className="flex items-center gap-3 text-slate-400 font-bold uppercase text-[10px] tracking-wider border-t border-slate-50 pt-5">
               
-              {/* ✅ LOGO ICON SEBELUM REDAKSI */}
               <div className="flex items-center gap-2">
                 <Image 
                   src="/icon.png" 
@@ -146,16 +166,24 @@ export default async function ArticleDetailPage({ params }: Props) {
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+            {/* KONTEN UTAMA */}
             <div className="lg:col-span-8">
               {article.thumbnail && (
                 <div className="mb-12 overflow-hidden rounded-[4px] border border-slate-50 shadow-2xl shadow-slate-100">
                   <div className="relative aspect-video w-full">
-                    <Image src={article.thumbnail} alt={article.title} fill className="object-cover" priority />
+                    <Image 
+                      src={article.thumbnail} 
+                      alt={article.title} 
+                      fill 
+                      className="object-cover" 
+                      priority 
+                    />
                   </div>
                 </div>
               )}
 
               <div className="grid grid-cols-1 lg:grid-cols-8 gap-8 relative">
+                {/* SHARE BUTTONS DESKTOP */}
                 <aside className="hidden lg:block lg:col-span-1">
                   <div className="sticky top-28">
                     <ShareButtons url={shareUrl} title={article.title} />
@@ -205,7 +233,12 @@ export default async function ArticleDetailPage({ params }: Props) {
                       >
                         <div className="relative w-16 h-16 shrink-0 overflow-hidden rounded-[4px] bg-slate-100 border border-slate-50">
                           {item.thumbnail ? (
-                            <Image src={item.thumbnail} alt={item.title} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+                            <Image 
+                              src={item.thumbnail} 
+                              alt={item.title} 
+                              fill 
+                              className="object-cover group-hover:scale-110 transition-transform duration-500" 
+                            />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-slate-300">RSM</div>
                           )}
@@ -222,6 +255,8 @@ export default async function ArticleDetailPage({ params }: Props) {
                     ))}
                   </div>
                 </section>
+                
+                {/* Bisa ditambah Widget Iklan Sidebar di sini */}
               </div>
             </aside>
           </div>
