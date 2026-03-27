@@ -8,7 +8,7 @@ import RichTextEditor from "../RichTextEditor";
 import TagInput from "@/components/TagInput";
 import { 
   Loader2, CheckCircle2, LayoutGrid, FileText, 
-  Image as ImageIcon, Tag, ChevronLeft, AlertCircle, 
+  ImageIcon, Tag, ChevronLeft, AlertCircle, 
   Upload, Link as LinkIcon, Lock, Unlock 
 } from "lucide-react";
 
@@ -53,7 +53,9 @@ export default function CreateInfoPage() {
       try {
         const res = await fetch("/api/categories");
         const data = await res.json();
-        if (Array.isArray(data)) setCategories(data);
+        if (Array.isArray(data)) {
+          setCategories(data);
+        }
       } catch (err) {
         console.error("Gagal memuat kategori.");
       }
@@ -71,27 +73,42 @@ export default function CreateInfoPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (previewUrl) URL.revokeObjectURL(previewUrl); // Hapus preview lama
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
+  /**
+   * ✅ CLIENT ACTION: Penanganan agar tidak kena Digest Error saat Redirect
+   */
   async function clientAction(formData: FormData) {
     setIsSubmitting(true);
     setError(null);
 
-    // ✅ Gabungkan data manual ke FormData sebelum dikirim
+    // Masukkan data manual ke FormData
     formData.append("content", content);
     formData.append("tags", tags.join(","));
     formData.append("slug", slug); 
 
     try {
+      // Panggil Server Action
       await createInfo(formData);
+      
+      // Jika berhasil sampai sini, tampilkan overlay sukses
       setSuccess(true);
-      // Redirect setelah 2 detik agar admin bisa lihat feedback sukses
-      setTimeout(() => router.push("/admin/info"), 2000);
+      // Catatan: redirect() di server action biasanya akan langsung memindahkan halaman
     } catch (err: any) {
-      setError(err.message || "Waduh Aris, gagal menerbitkan warta. Cek koneksi database!");
+      /**
+       * PENTING: Next.js 'redirect' melempar error internal. 
+       * Jika pesan error mengandung 'NEXT_REDIRECT', itu bukan error beneran.
+       */
+      if (err.message === "NEXT_REDIRECT") {
+        setSuccess(true);
+        return;
+      }
+
+      console.error("Error Detail:", err);
+      setError(err.message || "Database sedang Stun! Cek koneksi di Vercel.");
       setIsSubmitting(false);
     }
   }
@@ -160,7 +177,7 @@ export default function CreateInfoPage() {
                 />
               </div>
 
-              {/* AUTO-SLUG (Premium Logic) */}
+              {/* AUTO-SLUG */}
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
@@ -197,9 +214,13 @@ export default function CreateInfoPage() {
                   className="w-full bg-slate-50 border-2 border-slate-50 focus:border-emerald-500 focus:bg-white p-4 rounded-[4px] font-black text-slate-600 transition-all outline-none cursor-pointer shadow-sm appearance-none"
                 >
                   <option value="">Pilih Kategori...</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
+                  {categories.length > 0 ? (
+                    categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))
+                  ) : (
+                    <option disabled>Memuat kategori dari database...</option>
+                  )}
                 </select>
               </div>
             </div>
@@ -231,9 +252,9 @@ export default function CreateInfoPage() {
                       </div>
                     </>
                   ) : (
-                    <div className="text-center">
+                    <div className="text-center px-4">
                       <ImageIcon size={40} className="text-slate-200 mx-auto mb-2" />
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-4">Klik untuk pilih foto cover</p>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Klik untuk pilih foto cover</p>
                     </div>
                   )}
                 </div>
