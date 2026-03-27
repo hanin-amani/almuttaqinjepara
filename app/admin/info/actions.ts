@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
-// Setup Supabase untuk Upload File
+// Setup Supabase (Pakai Service Role agar bypass RLS saat upload)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -23,11 +23,13 @@ async function uploadToSupabase(file: File, folder: string) {
 
   const { data, error } = await supabase.storage
     .from("warta") // ✅ Pastikan nama BUCKET di Supabase adalah 'warta'
-    .upload(filePath, file);
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
 
   if (error) {
-    console.error("Gagal Upload ke Supabase:", error.message);
-    return null;
+    throw new Error(`Gagal Upload ke Storage: ${error.message}`);
   }
 
   const { data: { publicUrl } } = supabase.storage
@@ -38,36 +40,45 @@ async function uploadToSupabase(file: File, folder: string) {
 }
 
 /**
- * 1. TAMBAH ARTIKEL
+ * 1. TAMBAH ARTIKEL (CREATE)
  */
 export async function createInfo(formData: FormData) {
   const title = formData.get("title") as string;
   const content = formData.get("content") as string;
   const category_id = formData.get("category_id") as string;
   const status = formData.get("status") as string;
+  const manualSlug = formData.get("slug") as string; // ✅ Ambil slug dari UI
   
-  // Ambil File dari input 'thumbnailFile'
-  const file = formData.get("thumbnailFile") as File;
-  const imageUrl = await uploadToSupabase(file, "thumbnails");
+  if (!title || !content || !category_id) {
+    throw new Error("Judul, Konten, dan Kategori wajib diisi!");
+  }
 
-  const slug = title
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^\w-]+/g, "") + "-" + Date.now().toString().slice(-4);
+  const file = formData.get("thumbnailFile") as File;
+  let imageUrl = null;
 
   try {
+    if (file && file.size > 0) {
+      imageUrl = await uploadToSupabase(file, "thumbnails");
+    }
+
+    // Gunakan slug dari UI, jika kosong baru generate manual
+    const finalSlug = manualSlug || title.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
+
     await prisma.info.create({
       data: {
         title,
-        slug,
+        slug: finalSlug,
         content,
-        thumbnail: imageUrl, // Simpan URL hasil upload
+        thumbnail: imageUrl,
         status: status || "publish",
         category_id: category_id || null,
+        is_active: true
       },
     });
-  } catch (error) {
-    console.error("Gagal membuat artikel:", error);
+  } catch (error: any) {
+    console.error("CREATE ERROR:", error);
+    if (error.code === 'P2002') throw new Error("URL/Slug sudah terpakai, ganti judul dikit!");
+    throw new Error(error.message || "Gagal menyimpan ke database");
   }
 
   revalidatePath("/admin/info");
@@ -76,11 +87,12 @@ export async function createInfo(formData: FormData) {
 }
 
 /**
- * 2. UPDATE ARTIKEL
+ * 2. UPDATE ARTIKEL (EDIT)
  */
 export async function updateInfo(formData: FormData) {
   const id = formData.get("id") as string;
   const title = formData.get("title") as string;
+  const slug = formData.get("slug") as string; // ✅ Ambil slug terbaru dari UI
   const content = formData.get("content") as string;
   const category_id = formData.get("category_id") as string;
   const status = formData.get("status") as string;
@@ -88,20 +100,21 @@ export async function updateInfo(formData: FormData) {
 
   if (!id) throw new Error("ID tidak ditemukan");
 
-  // Logika Gambar: Jika ada file baru, upload. Jika tidak, pakai yang lama.
   const file = formData.get("thumbnailFile") as File;
   let finalImageUrl = oldThumbnail;
 
-  if (file && file.size > 0) {
-    const uploadedUrl = await uploadToSupabase(file, "thumbnails");
-    if (uploadedUrl) finalImageUrl = uploadedUrl;
-  }
-
   try {
+    // Jika ada upload file baru
+    if (file && file.size > 0) {
+      const uploadedUrl = await uploadToSupabase(file, "thumbnails");
+      if (uploadedUrl) finalImageUrl = uploadedUrl;
+    }
+
     await prisma.info.update({
       where: { id },
       data: {
         title,
+        slug, // ✅ Pastikan slug juga diupdate
         content,
         thumbnail: finalImageUrl,
         status: status || "publish",
@@ -109,17 +122,20 @@ export async function updateInfo(formData: FormData) {
         updated_at: new Date(),
       },
     });
-  } catch (error) {
-    console.error("Gagal update artikel:", error);
+  } catch (error: any) {
+    console.error("UPDATE ERROR:", error);
+    if (error.code === 'P2002') throw new Error("Gagal! URL/Slug ini sudah dipakai berita lain.");
+    throw new Error(error.message || "Koneksi Database/Storage Bermasalah");
   }
 
   revalidatePath("/admin/info");
-  revalidatePath("/warta");
+  revalidatePath(`/warta/${slug}`);
+  revalidatePath("/");
   redirect("/admin/info");
 }
 
 /**
- * 3. HAPUS ARTIKEL
+ * 3. HAPUS ARTIKEL (DELETE)
  */
 export async function deleteInfo(formData: FormData) {
   const id = formData.get("id") as string;
@@ -129,10 +145,10 @@ export async function deleteInfo(formData: FormData) {
     await prisma.info.delete({
       where: { id },
     });
+    revalidatePath("/admin/info");
+    revalidatePath("/warta");
   } catch (error) {
-    console.error("Gagal hapus artikel:", error);
+    console.error("DELETE ERROR:", error);
+    throw new Error("Gagal menghapus data.");
   }
-
-  revalidatePath("/admin/info");
-  revalidatePath("/warta");
 }
