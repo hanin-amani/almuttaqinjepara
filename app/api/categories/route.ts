@@ -1,4 +1,4 @@
-// ✅ 1. KUNCI UTAMA: Paksa API selalu ambil data terbaru dari database
+// ✅ 1. ANTI-CACHE: Paksa API selalu ambil data terbaru dari Supabase
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -7,15 +7,17 @@ import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
-    // 2. Ambil kategori (Sesuaikan nama model: 'category' atau 'infoCategory')
-    // Saya sesuaikan dengan model 'category' yang biasa kita pakai sebelumnya
-    const categories = await prisma.category.findMany({
+    /**
+     * ✅ 2. FIX MODEL NAME: 
+     * Berdasarkan error build sebelumnya, model yang benar adalah 'infoCategory'.
+     */
+    const categories = await prisma.infoCategory.findMany({
       orderBy: { 
         name: "asc" 
       },
     });
 
-    // ✅ 3. Return dengan header Anti-Cache super ketat
+    // ✅ 3. RETURN DATA: Pakai header Anti-Cache super ketat
     return NextResponse.json(categories || [], {
       status: 200,
       headers: {
@@ -25,12 +27,16 @@ export async function GET() {
       },
     });
   } catch (error: any) {
+    // Log error di terminal Vercel agar Aris bisa pantau jika ada kendala koneksi
     console.error("❌ API CATEGORY ERROR:", error.message);
     
-    // Kirim array kosong agar frontend tidak crash, tapi kasih log di server
+    /**
+     * Balikkan array kosong [] agar frontend (InfoForm) tidak crash (.map error),
+     * tapi tetap kirim status 500 sebagai tanda ada masalah di server.
+     */
     return NextResponse.json([], { 
       status: 500,
-      statusText: "Gagal mengambil kategori. Cek koneksi Supabase Aris!" 
+      statusText: "Database Stun! Cek koneksi Supabase antum." 
     });
   }
 }
