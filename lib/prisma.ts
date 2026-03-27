@@ -1,29 +1,31 @@
 import { PrismaClient } from "@prisma/client";
 
 /**
- * SINGLETON PRISMA: 
- * Menghindari kebocoran koneksi database saat Hot-Reload di development
- * dan membatasi koneksi di serverless production.
+ * SINGLETON PRISMA (Anti-Digest & Anti-MaxClients)
+ * Kunci utama agar koneksi database tidak "bocor" saat 
+ * proses Hot-Reload di development dan Serverless di Vercel.
  */
 
 const prismaClientSingleton = () => {
   return new PrismaClient({
-    // Log query hanya di development agar tidak membebani server production
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+    // Filter log: query dimatikan di prod agar tidak membebani log server
+    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
 };
 
-// Menggunakan tipe data global agar TypeScript tidak komplain
+// Pastikan globalThis terdaftar di TypeScript
 declare global {
+  // eslint-disable-next-line no-var
   var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
 }
 
-// Gunakan instansi yang sudah ada (global) atau buat baru
+// Gunakan instansi yang sudah ada atau buat baru
 const prisma = globalThis.prisma ?? prismaClientSingleton();
 
 export default prisma;
 
-// Simpan instansi ke global di mode development
+// Di mode development, simpan instansi ke globalThis
+// agar tidak tercipta koneksi baru setiap kali antum simpan (save) kode
 if (process.env.NODE_ENV !== "production") {
   globalThis.prisma = prisma;
 }
