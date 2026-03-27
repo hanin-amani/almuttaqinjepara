@@ -26,9 +26,10 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
   // ✅ STATE UTAMA (Auto-Slug Logic)
   const [title, setTitle] = useState(data.title);
   const [slug, setSlug] = useState(data.slug);
-  const [isSlugLocked, setIsSlugLocked] = useState(true); 
+  const [isSlugLocked, setIsSlugLocked] = useState(true); // Default Locked agar link lama tidak rusak
 
   const [content, setContent] = useState(data.content);
+  const [categories, setCategories] = useState<any[]>([]); // ✅ State Kategori Dinamis
   const [previewUrl, setPreviewUrl] = useState(data.thumbnail || "");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -43,6 +44,22 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
       .replace(/--+/g, "-")
       .trim();
   };
+
+  // ✅ EFFECT: Ambil Semua Kategori dari API (Savage dynamic!)
+  useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const res = await fetch("/api/categories");
+        const json = await res.json();
+        if (Array.isArray(json)) {
+          setCategories(json);
+        }
+      } catch (err) {
+        console.error("Gagal memuat kategori:", err);
+      }
+    };
+    fetchCats();
+  }, []);
 
   // ✅ EFFECT: Sync Slug saat judul berubah (jika Unlocked)
   useEffect(() => {
@@ -80,19 +97,19 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
   const clientAction = async (formData: FormData) => {
     setLoading(true);
     
-    // Pastikan data state terbaru ikut terkirim
+    // ✅ Tambahkan data state terbaru ke FormData
     formData.append("content", content);
     formData.append("slug", slug);
 
     try {
       await updateInfo(formData);
       setSuccess(true);
-      // Redirect setelah 2 detik agar admin bisa lihat notifikasi sukses
+      // Redirect setelah sukses biar admin bisa lihat feedbacknya
       setTimeout(() => router.push("/admin/info"), 2000);
     } catch (err) {
       console.error("Gagal simpan:", err);
       setLoading(false);
-      alert("Waduh, gagal simpan perubahan. Cek koneksi database!");
+      alert("Gagal simpan perubahan. Aris, cek koneksi database!");
     }
   };
 
@@ -100,12 +117,12 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
     <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl shadow-emerald-900/5 border border-slate-100 mb-12 relative overflow-hidden text-left font-sans">
       <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
 
-      {/* ✅ SUCCESS OVERLAY (Savage Feedback) */}
+      {/* ✅ SUCCESS OVERLAY */}
       {success && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-emerald-600/95 text-white animate-in fade-in duration-500">
           <CheckCircle2 size={60} className="mb-4 animate-bounce" />
-          <h2 className="text-xl font-black uppercase tracking-[0.3em] italic">Perubahan Tersimpan!</h2>
-          <p className="text-xs text-emerald-100 mt-2 font-bold uppercase tracking-widest">Sinkronisasi data berhasil...</p>
+          <h2 className="text-xl font-black uppercase tracking-[0.3em] italic text-center px-4">Perubahan Tersimpan!</h2>
+          <p className="text-xs text-emerald-100 mt-2 font-bold uppercase tracking-widest">Sinkronisasi database berhasil...</p>
         </div>
       )}
 
@@ -116,7 +133,7 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
             <span className="p-3 bg-emerald-100 rounded-2xl">✏️</span>
             Edit <span className="text-emerald-600">Warta Pondok</span>
           </h2>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2 ml-1">Pusat Kendali Al Muttaqin</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2 ml-1">RSM Media Center Al Muttaqin</p>
         </div>
         <Link href="/admin/info" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-emerald-600 transition-colors">
           <ArrowLeft size={14} /> Kembali ke Daftar
@@ -129,9 +146,9 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-5 space-y-8">
-            {/* Judul */}
-            <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest ml-1 text-left">Judul Warta Utama</label>
+            {/* Judul Warta */}
+            <div className="text-left">
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest ml-1">Judul Warta Utama</label>
               <input 
                 name="title" 
                 value={title}
@@ -141,11 +158,11 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
               />
             </div>
 
-            {/* ✅ AUTO-SLUG FIELD (Premium Edit Mode) */}
-            <div>
+            {/* ✅ AUTO-SLUG FIELD */}
+            <div className="text-left">
               <div className="flex justify-between items-center mb-3 ml-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <LinkIcon size={12} className="text-emerald-500" /> URL / Slug (SEO)
+                  <LinkIcon size={12} className="text-emerald-500" /> URL / Slug Berita
                 </label>
                 <button 
                   type="button" 
@@ -165,24 +182,31 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
                   className={`w-full px-6 py-5 pl-20 rounded-[1.5rem] border-2 ${isSlugLocked ? 'border-transparent bg-slate-50 text-slate-400' : 'border-amber-400 bg-white text-slate-800'} outline-none font-bold text-xs transition-all shadow-inner`}
                 />
               </div>
-              <p className="mt-2 ml-1 text-[8px] text-slate-300 italic uppercase font-bold tracking-wider">
-                * Hati-hati: Mengubah slug akan mematikan link lama yang sudah tersebar.
-              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-6 text-left">
+              {/* ✅ KATEGORI DINAMIS */}
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest ml-1">Kategori</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest ml-1">Kategori Berita</label>
                 <select 
                   name="category_id" 
                   defaultValue={data.category_id || ""} 
                   className="w-full px-6 py-5 rounded-[1.5rem] border border-slate-100 bg-slate-50 outline-none font-black text-slate-700 appearance-none focus:ring-4 focus:ring-emerald-100 transition-all shadow-sm"
                 >
-                  <option value="11111111-1111-1111-1111-111111111111">📰 Kabar Pondok</option>
-                  <option value="33333333-3333-3333-3333-333333333333">🎙️ Materi Khutbah</option>
-                  <option value="44444444-4444-4444-4444-444444444444">💰 Info Donasi</option>
+                  <option value="">-- Pilih Kategori --</option>
+                  {categories.length > 0 ? (
+                    categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option disabled>Memuat kategori...</option>
+                  )}
                 </select>
               </div>
+
+              {/* Status */}
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest ml-1">Status</label>
                 <select 
@@ -199,7 +223,7 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
             {/* UPLOAD GAMBAR */}
             <div className="text-left">
               <div className="flex justify-between items-center mb-3 ml-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gambar Utama</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gambar Utama (Thumbnail)</label>
                 {previewUrl !== data.thumbnail && (
                   <button type="button" onClick={handleResetImage} className="text-[9px] font-black text-red-500 uppercase flex items-center gap-1 hover:underline">
                     <RefreshCcw size={10} /> Reset
@@ -228,7 +252,7 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
 
           {/* EDITOR KONTEN */}
           <div className="lg:col-span-7 flex flex-col text-left">
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest ml-1">Isi Warta / Konten Utama</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest ml-1">Konten Utama Warta</label>
             <div className="flex-1 bg-slate-50 rounded-[2rem] border border-slate-100 overflow-hidden focus-within:ring-4 focus-within:ring-emerald-100 transition-all min-h-[500px] shadow-inner">
               <RichTextEditor content={content} onChange={setContent} />
             </div>
@@ -240,9 +264,9 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
           <button 
             type="submit" 
             disabled={loading} 
-            className="w-full py-6 bg-emerald-950 text-white rounded-[2rem] font-black text-[12px] uppercase tracking-[0.3em] hover:bg-emerald-900 shadow-2xl active:scale-[0.98] transition-all disabled:bg-slate-300 flex items-center justify-center gap-3"
+            className="w-full py-6 bg-emerald-950 text-white rounded-[2rem] font-black text-[12px] uppercase tracking-[0.3em] hover:bg-emerald-900 shadow-2xl active:scale-[0.98] transition-all disabled:bg-slate-300 flex items-center justify-center gap-3 shadow-emerald-950/20"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save size={18} className="text-emerald-400" /> SIMPAN PERUBAHAN 💾</>}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save size={18} className="text-emerald-400" /> SIMPAN PERUBAHAN WARTA 💾</>}
           </button>
         </div>
       </form>

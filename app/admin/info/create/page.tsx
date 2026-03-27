@@ -30,7 +30,7 @@ export default function CreateInfoPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ✅ FUNGSI GENERATOR SLUG
+  // ✅ FUNGSI GENERATOR SLUG (Clean & SEO Friendly)
   const generateSlug = (text: string) => {
     return text
       .toLowerCase()
@@ -47,6 +47,7 @@ export default function CreateInfoPage() {
     }
   }, [title, isSlugLocked]);
 
+  // ✅ FETCH KATEGORI DARI API
   useEffect(() => {
     async function fetchCats() {
       try {
@@ -60,9 +61,17 @@ export default function CreateInfoPage() {
     fetchCats();
   }, []);
 
+  // ✅ CLEANUP: Revoke URL object untuk cegah memory leak
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl); // Hapus preview lama
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
@@ -71,17 +80,18 @@ export default function CreateInfoPage() {
     setIsSubmitting(true);
     setError(null);
 
-    // ✅ Masukkan data manual ke FormData
+    // ✅ Gabungkan data manual ke FormData sebelum dikirim
     formData.append("content", content);
     formData.append("tags", tags.join(","));
-    formData.append("slug", slug); // Pastikan slug yang dikirim adalah yang terbaru
+    formData.append("slug", slug); 
 
     try {
       await createInfo(formData);
       setSuccess(true);
+      // Redirect setelah 2 detik agar admin bisa lihat feedback sukses
       setTimeout(() => router.push("/admin/info"), 2000);
     } catch (err: any) {
-      setError(err.message || "Gagal menerbitkan warta.");
+      setError(err.message || "Waduh Aris, gagal menerbitkan warta. Cek koneksi database!");
       setIsSubmitting(false);
     }
   }
@@ -90,6 +100,7 @@ export default function CreateInfoPage() {
     <main className="min-h-screen bg-slate-50 pb-20 pt-10 text-left font-sans">
       <div className="container mx-auto px-4 max-w-5xl">
         
+        {/* NAVIGASI KEMBALI */}
         <div className="mb-6">
           <Link 
             href="/admin/info" 
@@ -103,14 +114,18 @@ export default function CreateInfoPage() {
           action={clientAction}
           className="relative bg-white border border-slate-100 rounded-[4px] shadow-2xl p-6 md:p-10 space-y-8 overflow-hidden"
         >
+          {/* SUCCESS OVERLAY */}
           {success && (
             <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-emerald-600/95 text-white animate-in fade-in duration-500">
               <CheckCircle2 size={60} className="mb-4 animate-bounce" />
               <h2 className="text-xl font-black uppercase tracking-[0.3em] italic text-center">Warta Berhasil Terbit</h2>
-              <p className="text-xs text-emerald-100 mt-2 font-bold uppercase tracking-widest text-center">Data tersimpan di database & storage</p>
+              <p className="text-xs text-emerald-100 mt-2 font-bold uppercase tracking-widest text-center px-6">
+                Data tersimpan di database & storage. Mengarahkan kembali...
+              </p>
             </div>
           )}
 
+          {/* HEADER EDITOR */}
           <div className="flex items-center gap-4 border-b border-slate-50 pb-6">
             <div className="w-12 h-12 bg-slate-900 text-emerald-400 flex items-center justify-center rounded-[4px] shadow-lg">
               <FileText size={24} />
@@ -121,6 +136,7 @@ export default function CreateInfoPage() {
             </div>
           </div>
 
+          {/* ERROR ALERT */}
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-[4px] flex items-center gap-3 text-red-600 animate-in slide-in-from-top-2">
               <AlertCircle size={18} />
@@ -130,9 +146,9 @@ export default function CreateInfoPage() {
 
           <div className="grid md:grid-cols-2 gap-10">
             <div className="space-y-8">
-              {/* JUDUL */}
+              {/* JUDUL ARTIKEL */}
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block">Judul Artikel</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block">Judul Artikel Berita</label>
                 <input
                   type="text"
                   name="title"
@@ -144,7 +160,7 @@ export default function CreateInfoPage() {
                 />
               </div>
 
-              {/* ✅ AUTO-SLUG FIELD */}
+              {/* AUTO-SLUG (Premium Logic) */}
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
@@ -170,9 +186,10 @@ export default function CreateInfoPage() {
                 </div>
               </div>
 
+              {/* KATEGORI */}
               <div>
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
-                  <LayoutGrid size={12} className="text-emerald-500" /> Kategori
+                  <LayoutGrid size={12} className="text-emerald-500" /> Kategori Berita
                 </label>
                 <select
                   name="category_id"
@@ -188,9 +205,10 @@ export default function CreateInfoPage() {
             </div>
 
             <div className="space-y-8">
+              {/* UPLOAD COVER */}
               <div>
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
-                  <ImageIcon size={12} className="text-emerald-500" /> Cover Thumbnail (Upload)
+                  <ImageIcon size={12} className="text-emerald-500" /> Gambar Cover Berita
                 </label>
                 <div 
                   onClick={() => fileInputRef.current?.click()}
@@ -215,25 +233,27 @@ export default function CreateInfoPage() {
                   ) : (
                     <div className="text-center">
                       <ImageIcon size={40} className="text-slate-200 mx-auto mb-2" />
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Klik untuk pilih foto cover</p>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-4">Klik untuk pilih foto cover</p>
                     </div>
                   )}
                 </div>
               </div>
 
+              {/* STATUS */}
               <div>
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block">Status Publikasi</label>
                 <select
                   name="status"
                   className="w-full bg-slate-50 border-2 border-slate-50 focus:border-emerald-500 focus:bg-white p-4 rounded-[4px] font-black text-slate-600 transition-all outline-none shadow-sm"
                 >
-                  <option value="publish">Langsung Terbitkan</option>
-                  <option value="draft">Simpan Draft</option>
+                  <option value="publish">Langsung Terbitkan (Live)</option>
+                  <option value="draft">Simpan sebagai Draft</option>
                 </select>
               </div>
             </div>
           </div>
 
+          {/* TAGS AREA */}
           <div className="space-y-3 pt-4">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2">
               <Tag size={12} className="text-emerald-500" /> Tags / Kata Kunci SEO
@@ -241,6 +261,7 @@ export default function CreateInfoPage() {
             <TagInput tags={tags} setTags={setTags} />
           </div>
 
+          {/* EDITOR AREA */}
           <div className="space-y-4 border-t border-slate-50 pt-8">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Isi Artikel Lengkap</label>
             <div className="border-2 border-slate-50 rounded-[4px] overflow-hidden bg-white shadow-xl min-h-[500px] focus-within:border-emerald-500 transition-all">
@@ -248,13 +269,14 @@ export default function CreateInfoPage() {
             </div>
           </div>
 
+          {/* ACTION BUTTON */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-10 border-t border-slate-50">
             <div className="flex items-center gap-4 text-left">
                <div className="p-3 bg-emerald-50 rounded-full text-emerald-600">
                   <CheckCircle2 size={20} />
                </div>
                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest max-w-[250px] leading-relaxed italic">
-                 URL dan Metadata akan otomatis dioptimasi untuk mesin pencari.
+                 Konten akan dioptimasi secara otomatis untuk pencarian Google.
                </p>
             </div>
             
