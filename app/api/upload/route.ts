@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: Request) {
   try {
@@ -11,18 +15,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "File tidak ditemukan" }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const fileName = `${Date.now()}-${file.name.replace(/\s/g, "-")}`;
 
-    const fileName = Date.now() + "-" + file.name.replace(/\s/g, "-");
+    const { data: uploadData, error } = await supabase.storage
+      .from("thumbnails")
+      .upload(`posts/${fileName}`, file, {
+        contentType: file.type,
+      });
 
-    const uploadPath = path.join(process.cwd(), "public/uploads", fileName);
+    if (error) {
+      console.error(error);
+      return NextResponse.json({ error: "Upload gagal" }, { status: 500 });
+    }
 
-    fs.writeFileSync(uploadPath, buffer);
+    const { data: publicUrl } = supabase.storage
+      .from("thumbnails")
+      .getPublicUrl(`posts/${fileName}`);
 
     return NextResponse.json({
       success: true,
-      url: `/uploads/${fileName}`,
+      url: publicUrl.publicUrl,
     });
 
   } catch (error) {
