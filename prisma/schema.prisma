@@ -14,6 +14,18 @@ datasource db {
 // PUBLIC SCHEMA (APLIKASI RADIO)
 /////////////////////////////////////////////////////
 
+// ✅ VIRTUAL RADIO STREAM (Solusi Baru Anti-VPS & Anti-Digest Error)
+model RadioStream {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title         String   // Judul program (misal: "Taujih Pagi")
+  audio_url     String   // URL file .mp3 dari Supabase Storage
+  start_time    DateTime @default(now()) // Waktu mulai siaran serempak
+  duration      Int      // Durasi file audio dalam satuan detik
+
+  @@map("radio_streams")
+  @@schema("public")
+}
+
 model Schedule {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   program_name String
@@ -60,7 +72,7 @@ model Info {
   content     String   @db.Text
   thumbnail   String?
   
-  // ✅ TAMBAHAN: Untuk menyimpan kata kunci (comma separated string)
+  // Untuk menyimpan kata kunci (comma separated string)
   tags        String?
 
   status      String   @default("published")
@@ -84,12 +96,12 @@ model Info {
 }
 
 model InfoCategory {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name       String
-  slug       String   @unique
-  created_at DateTime @default(now())
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  slug        String   @unique
+  created_at  DateTime @default(now())
 
-  infos      Info[]
+  infos       Info[]
 
   @@index([slug])
   @@map("info_categories")
@@ -105,7 +117,7 @@ model Comment {
   name        String
   email       String   
   website     String?  
-  image       String?  // ✅ TAMBAHKAN INI: Untuk menyimpan URL Avatar/Foto Profil
+  image       String?  // Untuk menyimpan URL Avatar/Foto Profil
   content     String   @db.Text
   info_id     String   @db.Uuid
   is_approved Boolean  @default(true)
@@ -114,7 +126,7 @@ model Comment {
   user_id     String?  @db.Uuid
   user        User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
 
-  // ✅ SISTEM BALASAN (Self-Relation)
+  // SISTEM BALASAN (Self-Relation)
   parent_id   String?   @db.Uuid
   parent      Comment?  @relation("CommentReplies", fields: [parent_id], references: [id], onDelete: Cascade)
   replies     Comment[] @relation("CommentReplies")
@@ -151,18 +163,18 @@ model User {
 }
 
 model Account {
-  id                 String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId             String  @db.Uuid
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String? @db.Text
-  access_token       String? @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String? @db.Text
-  session_state      String?
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String  @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
