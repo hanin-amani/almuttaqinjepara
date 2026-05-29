@@ -22,7 +22,8 @@ const AudioContext = createContext<AudioContextType | null>(null);
 
 export function AudioProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  // ✅ PERBAIKAN TIPE DATA: Menggunakan tipe bawaan browser AudioContext agar tidak tabrakan dengan nama komponen React kita
+  const audioContextRef = useRef<window.AudioContext | AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const isInitialized = useRef(false);
@@ -122,8 +123,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         audio.load();
         audio.currentTime = data.elapsed_seconds;
 
-        if (audioCtx && audioCtx.state === "suspended") {
-          await audioCtx.resume();
+        if (audioCtx && (audioCtx as any).state === "suspended") {
+          await (audioCtx as any).resume();
         }
 
         await audio.play();
@@ -167,7 +168,13 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     return () => {
-      if (audioContextRef.current) audioContextRef.current.close();
+      if (audioContextRef.current) {
+        try {
+          (audioContextRef.current as any).close();
+        } catch (e) {
+          console.error(e);
+        }
+      }
     };
   }, []);
 
@@ -175,14 +182,14 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     <AudioContext.Provider value={{ isPlaying, hasError, metadata, listeners, togglePlay, analyserRef }}>
       <audio
         ref={audioRef}
-        crossOrigin="anonymous"
+        // 🔴 DEPAK/HAPUS CROSSORIGIN DEMI JALUR BEBAS CORS DARI HOSTING BIASA (sdit.my.id)
         preload="none"
         onPause={() => setIsPlaying(false)}
         onPlay={() => {
           setIsPlaying(true);
           setHasError(false);
         }}
-        onEnded={handleAudioEnded} // 👈 🚀 INI KUNCI EMASNYA, NAUFAL!
+        onEnded={handleAudioEnded}
         onError={() => {
           setHasError(true);
           setIsPlaying(false);
