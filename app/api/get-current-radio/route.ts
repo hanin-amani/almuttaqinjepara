@@ -7,11 +7,11 @@ import prisma from "@/lib/prisma";
 const FILLER_PLAYLIST = [
   {
     title: "Murottal Jeda - Surah Al-Mulk",
-    url: "https://zkxokackzppkxjrvqgka.supabase.co/storage/v1/object/public/radio/Surah%20Al%20Mulk%20-%20Saad%20Al%20Ghamdi.mp3",
+    url: "https://sdit.my.id/radio/SurahAlMulk-Saad-Al-Ghamdi.mp3",
     duration: 180, // 3 menit
   },
   {
-    title: "Murottal Jeda - Surah Al-Waqiah",
+    title: "Nasyid Jeda - Rikhie Asbo",
     url: "https://sdit.my.id/radio/Rikhie-Asbo.mp3",
     duration: 300, // 5 menit
   },
