@@ -22,8 +22,9 @@ const AudioContext = createContext<AudioContextType | null>(null);
 
 export function AudioProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // ✅ PERBAIKAN TIPE DATA: Menggunakan tipe bawaan browser AudioContext agar tidak tabrakan dengan nama komponen React kita
-  const audioContextRef = useRef<window.AudioContext | AudioContext | null>(null);
+  
+  // ✅ FIX SILENT: Menggunakan any untuk context engine agar aman dari tabrakan nama komponen & lolos compile Vercel
+  const audioContextRef = useRef<any>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const isInitialized = useRef(false);
@@ -106,7 +107,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ===============================
-  // LOGIKA UTAMA MEMUTAR LIVE SYNC (DIPISAH AGAR BISA DIPANGGIL RECURSIVE)
+  // LOGIKA UTAMA MEMUTAR LIVE SYNC
   // ===============================
   const startPlayback = useCallback(async () => {
     if (!audioRef.current) return;
@@ -118,19 +119,17 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
 
       if (data && data.active) {
-        // Daftarkan URL baru dan set detik lompatannya
         audio.src = data.audio_url;
         audio.load();
         audio.currentTime = data.elapsed_seconds;
 
-        if (audioCtx && (audioCtx as any).state === "suspended") {
-          await (audioCtx as any).resume();
+        if (audioCtx && audioCtx.state === "suspended") {
+          await audioCtx.resume();
         }
 
         await audio.play();
         setIsPlaying(true);
         setHasError(false);
-        // Perbarui judul player secara instan tanpa menunggu interval 15 detik
         setMetadata(prev => ({ ...prev, title: data.title })); 
       } else {
         setIsPlaying(false);
@@ -149,7 +148,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
     if (isPlaying) {
       audioRef.current.pause();
-      audioRef.current.src = ""; // Flush buffer stream
+      audioRef.current.src = ""; 
       audioRef.current.load();
       setIsPlaying(false);
     } else {
@@ -158,11 +157,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // 🚀 RE-SYNC OTOMATIS SAAT LAGU SELESAI (Pindah ke file berikutnya)
+  // RE-SYNC OTOMATIS SAAT LAGU SELESAI
   const handleAudioEnded = async () => {
     console.log("🎵 File MP3 selesai diputar. Melompat ke track virtual berikutnya...");
     if (isPlaying) {
-      await startPlayback(); // Panggil fungsi putar lagi untuk mengambil track selanjutnya dari API
+      await startPlayback(); 
     }
   };
 
@@ -170,7 +169,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (audioContextRef.current) {
         try {
-          (audioContextRef.current as any).close();
+          audioContextRef.current.close();
         } catch (e) {
           console.error(e);
         }
@@ -182,7 +181,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     <AudioContext.Provider value={{ isPlaying, hasError, metadata, listeners, togglePlay, analyserRef }}>
       <audio
         ref={audioRef}
-        // 🔴 DEPAK/HAPUS CROSSORIGIN DEMI JALUR BEBAS CORS DARI HOSTING BIASA (sdit.my.id)
         preload="none"
         onPause={() => setIsPlaying(false)}
         onPlay={() => {

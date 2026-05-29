@@ -1,6 +1,6 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
+  provider = "prisma-client-js"
+  // ✅ UPDATE FIX: Baris previewFeatures ["multiSchema"] dihapus di sini karena sudah stabil bawaan produksi
 }
 
 datasource db {
@@ -16,11 +16,11 @@ datasource db {
 
 // ✅ VIRTUAL RADIO STREAM (Solusi Baru Anti-VPS & Anti-Digest Error)
 model RadioStream {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title         String   // Judul program (misal: "Taujih Pagi")
-  audio_url     String   // URL file .mp3 dari Supabase Storage
-  start_time    DateTime @default(now()) // Waktu mulai siaran serempak
-  duration      Int      // Durasi file audio dalam satuan detik
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String   // Judul program (misal: "Taujih Pagi")
+  audio_url       String   // URL file .mp3 / .m4a dari Hosting / Supabase Storage
+  start_time      DateTime @default(now()) // Waktu mulai siaran serempak
+  duration        Int      // Durasi file audio dalam satuan detik
 
   @@map("radio_streams")
   @@schema("public")
@@ -209,12 +209,12 @@ model VerificationToken {
 /////////////////////////////////////////////////////
 
 model Admin {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email       String   @unique
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String    @unique
   password    String
-  role        String   @default("admin")
+  role        String    @default("admin")
   last_login  DateTime?
-  created_at  DateTime @default(now())
+  created_at  DateTime  @default(now())
 
   @@map("admins")
   @@schema("public")
