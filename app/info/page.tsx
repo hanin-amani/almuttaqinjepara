@@ -1,6 +1,8 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 export default async function PublicInfoPage() {
   // 1. Mengambil informasi yang aktif, dipublish, DAN menyertakan data kategorinya
   const infos = await prisma.info.findMany({
