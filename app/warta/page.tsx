@@ -26,7 +26,14 @@ export default function WartaJemaahPage() {
           `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts?key=${apiKey}&maxResults=10`
         );
 
-        if (!res.ok) throw new Error("Gagal mengambil respon JSON dari server Blogger Google.");
+        // 🟢 PELACAK AKURAT: Tangkap detail jika ada kendala hak akses dari Google Cloud
+        if (!res.ok) {
+          const rawErrorText = await res.text();
+          console.error("💥 Detail JSON Error Google:", rawErrorText);
+          throw new Error(
+            `Google API Error (Status: ${res.status}). Pastikan Blog ID benar, API Key aktif, dan setelan blog tidak Private!`
+          );
+        }
 
         const data = await res.json();
         setPosts(data.items || []);
@@ -69,7 +76,7 @@ export default function WartaJemaahPage() {
     <main className="min-h-screen bg-slate-50 pb-20 pt-10 text-left font-sans">
       <div className="container mx-auto px-4 max-w-6xl">
         
-        {/* HEADER BARIS UTAMA */}
+        {/* HEADER BARIS UTAMA (Login Jemaah Dibuang Karena Sudah Ada di Navbar Atas) */}
         <div className="bg-slate-900 p-8 rounded-[2rem] shadow-2xl border-b-4 border-emerald-500 mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter flex items-center gap-3">
@@ -79,19 +86,16 @@ export default function WartaJemaahPage() {
               Sinergi Informasi Suara Al Muttaqin Purwokerto
             </p>
           </div>
-          <Link href="/login" className="bg-emerald-600 hover:bg-white hover:text-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
-            🔒 Login Jemaah
-          </Link>
         </div>
 
         {error && (
-          <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-bold uppercase tracking-wider rounded-lg mb-8">
+          <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-bold uppercase tracking-wider rounded-lg mb-8 leading-relaxed">
             {error}
           </div>
         )}
 
-        {/* LIST BERITA GRID PREMIUM (Copas Style Indah Antum Semalam!) */}
-        {posts.length === 0 ? (
+        {/* LIST BERITA GRID PREMIUM */}
+        {posts.length === 0 && !error ? (
           <div className="bg-white border-2 border-dashed border-slate-200 rounded-[2rem] py-24 text-center">
             <BookOpen className="mx-auto text-slate-200 mb-4" size={48} />
             <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Belum ada warta yang diterbitkan di Blogger.</p>
