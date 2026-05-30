@@ -1,15 +1,16 @@
+import { MetadataRoute } from "next";
 import prisma from "@/lib/prisma";
 
-// 🟢 MANTRA PENYELAMAT: Memaksa sitemap digenerate secara dinamis saat diakses jemaah / bot Google
-// Ini akan membantai eror ENOIDENTIFIER selamanya dari proses build Vercel!
+// 🟢 MANTRA PENYELAMAT MUTLAK: Mengunci sitemap ke mode dinamis penuh 
+// Supaya Turbopack meloloskan build-nya tanpa mencekik koneksi Supabase pas build time!
 export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
-export async function GET() {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://radioalmuttaqin.com";
 
   try {
-    // Tarik daftar slug artikel dari Supabase
+    // Ambil semua daftar slug artikel dari database Supabase baru
     const articles = await prisma.info.findMany({
       where: {
         status: { in: ["publish", "published"] },
@@ -21,55 +22,46 @@ export async function GET() {
       },
     });
 
-    // Rancang dokumen XML sitemap secara dinamis
-    const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
-    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-      <url>
-        <loc>${baseUrl}</loc>
-        <changefreq>daily</changefreq>
-        <priority>1.0</priority>
-      </url>
-      <url>
-        <loc>${baseUrl}/jadwal</loc>
-        <changefreq>weekly</changefreq>
-        <priority>0.8</priority>
-      </url>
-      <url>
-        <loc>${baseUrl}/warta</loc>
-        <changefreq>daily</changefreq>
-        <priority>0.8</priority>
-      </url>
-      ${articles
-        .map((art) => `
-        <url>
-          <loc>${baseUrl}/warta/${art.slug}</loc>
-          <lastmod>${new Date(art.created_at).toISOString()}</lastmod>
-          <changefreq>monthly</changefreq>
-          <priority>0.6</priority>
-        </url>
-        `).join("")}
-    </urlset>`;
-
-    // Kembalikan sebagai dokumen XML murni
-    return new Response(sitemapXml, {
-      headers: {
-        "Content-Type": "application/xml",
-        "Cache-Control": "public, max-age=86400, s-maxage=86400, stale-while-revalidate=43200",
+    // Petakan halaman statis utama
+    const staticPages: MetadataRoute.Sitemap = [
+      {
+        url: baseUrl,
+        lastModified: new Date(),
+        changeFrequency: "daily",
+        priority: 1.0,
       },
-    });
-  } catch (error) {
-    console.error("💥 Gagal merakit sitemap dinamis:", error);
-    
-    // Fallback sitemap standar jika database terputus, agar sitemap.xml TIDAK CRASH (Biar Google SEO aman)
-    const fallbackXml = `<?xml version="1.0" encoding="UTF-8"?>
-    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-      <url><loc>${baseUrl}</loc><priority>1.0</priority></url>
-      <url><loc>${baseUrl}/jadwal</loc><priority>0.8</priority></url>
-      <url><loc>${baseUrl}/warta</loc><priority>0.8</priority></url>
-    </urlset>`;
+      {
+        url: `${baseUrl}/jadwal`,
+        lastModified: new Date(),
+        changeFrequency: "weekly",
+        priority: 0.8,
+      },
+      {
+        url: `${baseUrl}/warta`,
+        lastModified: new Date(),
+        changeFrequency: "daily",
+        priority: 0.8,
+      },
+    ];
 
-    return new Response(fallbackXml, {
-      headers: { "Content-Type": "application/xml" },
-    });
+    // Gabungkan dengan halaman warta dinamis dari database
+    const dynamicPages: MetadataRoute.Sitemap = articles.map((art) => ({
+      url: `${baseUrl}/warta/${art.slug}`,
+      lastModified: new Date(art.created_at),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    }));
+
+    return [...staticPages, ...dynamicPages];
+
+  } catch (error) {
+    console.error("💥 Gagal merakit sitemap Next.js:", error);
+    
+    // Fallback darurat jika database sempat sibuk saat diakses bot agar build / runtime TIDAK CRASH
+    return [
+      { url: baseUrl, lastModified: new Date(), changeFrequency: "daily", priority: 1.0 },
+      { url: `${baseUrl}/jadwal`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+      { url: `${baseUrl}/warta`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
+    ];
   }
 }
