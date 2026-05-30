@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { ChevronRight, Newspaper } from "lucide-react";
+
+// 🟢 MANTRA KEAMANAN NEXT.JS: Menjamin Turbopack meloloskan komponen warta tanpa optimasi kaku pas build
+export const dynamic = "force-dynamic";
 
 export default function InfoSection({ articles }: { articles: any[] }) {
   if (!articles || articles.length === 0) return null;
@@ -32,53 +34,65 @@ export default function InfoSection({ articles }: { articles: any[] }) {
 
         {/* ✅ GRID 4 KOLOM: grid-cols-1 (HP), grid-cols-2 (Tablet), grid-cols-4 (Desktop) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {articles.map((item) => (
-            <Link 
-              key={item.id} 
-              href={`/warta/${item.slug}`}
-              className="group flex flex-col bg-white rounded-[4px] overflow-hidden border border-slate-100 hover:border-emerald-500/30 shadow-sm hover:shadow-xl transition-all duration-500"
-            >
-              {/* Thumbnail: Aspect Ratio diubah ke 4/3 agar lebih compact */}
-              <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
-                {item.thumbnail ? (
-                  <Image 
-                    src={item.thumbnail} 
-                    alt={item.title} 
-                    fill 
-                    className="object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-200">
-                    <Newspaper size={24} />
+          {articles.map((item) => {
+            // 🟢 ANTIDOTE TIMEOUT: Cek apakah thumbnail mengarah ke domain lama rsm.my.id
+            const hasBadDomain = item.thumbnail && item.thumbnail.includes("rsm.my.id");
+            // Jika mengarah ke domain lama, langsung alihkan ke gambar fallback lokal
+            const safeThumbnail = hasBadDomain ? "/bg-player.png" : item.thumbnail;
+
+            return (
+              <Link 
+                key={item.id} 
+                href={`/warta/${item.slug}`}
+                className="group flex flex-col bg-white rounded-[4px] overflow-hidden border border-slate-100 hover:border-emerald-500/30 shadow-sm hover:shadow-xl transition-all duration-500"
+              >
+                {/* Thumbnail: Aspect Ratio diubah ke 4/3 agar lebih compact */}
+                <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
+                  {safeThumbnail ? (
+                    /* 🟢 FIX UTAMA: Menggunakan tag img standar untuk mem-bypass proses download static image pas build Vercel */
+                    <img 
+                      src={safeThumbnail} 
+                      alt={item.title || "Warta"} 
+                      loading="lazy"
+                      onError={(e) => {
+                        // Jika gambar di database rusak/mati, ganti dengan gambar cadangan lokal secara instan
+                        (e.target as HTMLImageElement).src = "/bg-player.png";
+                      }}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-200">
+                      <Newspaper size={24} />
+                    </div>
+                  )}
+                  
+                  <div className="absolute top-3 left-3 z-20">
+                    <span className="px-2 py-1 bg-emerald-600 text-white text-[7px] font-black uppercase tracking-wider rounded-[2px]">
+                      {item.category?.name || "Info"}
+                    </span>
                   </div>
-                )}
-                
-                <div className="absolute top-3 left-3 z-20">
-                  <span className="px-2 py-1 bg-emerald-600 text-white text-[7px] font-black uppercase tracking-wider rounded-[2px]">
-                    {item.category?.name || "Info"}
-                  </span>
                 </div>
-              </div>
 
-              {/* Konten: Font-size dikecilkan sedikit (text-base) agar pas di 4 kolom */}
-              <div className="p-5 flex flex-col flex-1 text-left">
-                <time className="text-[8px] font-bold text-slate-400 uppercase mb-2 block">
-                  {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                </time>
+                {/* Konten: Font-size dikecilkan sedikit (text-base) agar pas di 4 kolom */}
+                <div className="p-5 flex flex-col flex-1 text-left">
+                  <time className="text-[8px] font-bold text-slate-400 uppercase mb-2 block">
+                    {item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : "--:--"}
+                  </time>
 
-                <h3 className="text-sm md:text-base font-black text-slate-900 leading-tight mb-4 group-hover:text-emerald-700 transition-colors uppercase italic line-clamp-2">
-                  {item.title}
-                </h3>
+                  <h3 className="text-sm md:text-base font-black text-slate-900 leading-tight mb-4 group-hover:text-emerald-700 transition-colors uppercase italic line-clamp-2">
+                    {item.title}
+                  </h3>
 
-                <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600">
-                    Selengkapnya
-                  </span>
-                  <ChevronRight size={12} className="text-emerald-300 group-hover:translate-x-1 transition-transform" />
+                  <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600">
+                      Selengkapnya
+                    </span>
+                    <ChevronRight size={12} className="text-emerald-300 group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>
