@@ -30,13 +30,16 @@ const MenuBar = ({ editor }: { editor: any }) => {
       >
         Italic
       </button>
+      
+      {/* 🔴 FIX: Typo 'inertialStyle =>' resmi dibuang dari sini */}
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        className={`${btnStyle} ${editor.isActive('heading', { level: 2 }) ? activeStyle : inertialStyle => inactiveStyle}`}
+        className={`${btnStyle} ${editor.isActive('heading', { level: 2 }) ? activeStyle : inactiveStyle}`}
       >
         H2
       </button>
+
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleBulletList().run()}
