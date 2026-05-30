@@ -4,18 +4,32 @@ import LogoutButton from "@/components/LogoutButton";
 import AdminMapWrapper from "@/components/AdminMapWrapper";
 import ListenerTable from "@/components/ListenerTable";
 
+// 🟢 MANTRA KEAMANAN MUTLAK: Mengunci dashboard ke dinamis penuh agar lolos build Vercel
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
 export default async function AdminDashboard() {
-  // 1. QUERY DATABASE PARALEL
-  const [totalRequests, pendingRequests, totalInfo] =
-    await Promise.all([
+  // 1. QUERY DATABASE PARALEL DENGAN SISTEM PENGAMAN GAJAH
+  let totalRequests = 0;
+  let pendingRequests = 0;
+  let totalInfo = 0;
+
+  try {
+    const [countTotalReq, countPendingReq, countInfo] = await Promise.all([
       prisma.songRequest.count(),
       prisma.songRequest.count({
         where: { status: "pending" },
       }),
       prisma.info.count(),
     ]);
+
+    totalRequests = countTotalReq;
+    pendingRequests = countPendingReq;
+    totalInfo = countInfo;
+  } catch (error) {
+    // ✅ AMAN: Jika database Supabase baru kosong/error, dashboard tidak akan crash putih lagi!
+    console.error("💥 Gagal mengambil data statistik dari Supabase baru, dialihkan ke 0:", error);
+  }
 
   // 2. FETCH REALTIME AZURACAST (STATION: SALAAM)
   let activeListeners = 0;
@@ -118,7 +132,6 @@ export default async function AdminDashboard() {
               Rincian Lokasi Pendengar Radio Al Muttaqin 🗺️
             </h3>
           </div>
-          {/* Komponen Client untuk Auto-update Tabel */}
           <ListenerTable />
         </div>
 
@@ -143,7 +156,7 @@ export default async function AdminDashboard() {
 
         <div className="mt-20 pt-8 border-t border-gray-200 text-center">
           <p className="text-gray-400 text-[10px] font-bold uppercase tracking-[0.4em]">
-            Radio Suara Al Muttaqin • Jepara, Jawa Tengah
+            Radio Suara Al Muttaqin • Purwokerto, Jawa Tengah
           </p>
         </div>
       </div>
