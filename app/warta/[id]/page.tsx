@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/router";
+// 🟢 FIX UTAMA: Mengalihkan impor Link ke komponen visual Next.js yang sah agar lulus kompilasi Vercel
+import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { 
   Loader2, 
@@ -176,7 +177,7 @@ export default function DetailWartaPage() {
         </div>
       </div>
 
-      {/* RENDER UTAMA ARTIKEL Khas Liputan6 Style (Clean, Bold, Focused Middle Column) */}
+      {/* RENDER UTAMA ARTIKEL Khas Liputan6 Style */}
       <article className="max-w-3xl mx-auto px-4 pt-10">
         
         {/* Kategori Atas */}
@@ -189,7 +190,7 @@ export default function DetailWartaPage() {
           {post.title}
         </h1>
 
-        {/* Metadata Penulis & Tanggal (Liputan6 Style Info Box) */}
+        {/* Metadata Penulis & Tanggal */}
         <div className="flex flex-wrap items-center justify-between border-y border-slate-100 py-4 mb-8 text-slate-500 text-[11px] font-bold gap-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
@@ -219,8 +220,7 @@ export default function DetailWartaPage() {
           </button>
         </div>
 
-        {/* ISI ARTIKEL HTML (Rendering murni output rich-text Blogger) */}
-        {/* Menggunakan Tailwind @tailwindcss/typography (prose) yang bersih & nyaman di mata */}
+        {/* ISI ARTIKEL HTML */}
         <div 
           className="prose prose-slate max-w-none text-slate-800 leading-relaxed text-sm md:text-base font-medium
             prose-headings:font-black prose-headings:tracking-tight prose-headings:uppercase prose-headings:italic
@@ -231,7 +231,7 @@ export default function DetailWartaPage() {
         />
 
         {/* ========================================================================= */}
-        {/* SEKTOR RUANG KOMENTAR JEMAAH (Supabase Integrated Client Section) */}
+        {/* SEKTOR RUANG KOMENTAR JEMAAH */}
         {/* ========================================================================= */}
         <section className="mt-16 pt-10 border-t border-slate-100">
           <h3 className="text-base font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 mb-8">
@@ -266,7 +266,7 @@ export default function DetailWartaPage() {
             </div>
           )}
 
-          {/* FORM INPUT TULIS KOMENTAR (Hanya aktif jika user lolos login Auth) */}
+          {/* FORM INPUT TULIS KOMENTAR */}
           {user && (
             <form onSubmit={handleSendComment} className="mb-10 space-y-3">
               <textarea
@@ -294,7 +294,7 @@ export default function DetailWartaPage() {
             </form>
           )}
 
-          {/* RENDERING FEED KOTAK DAFTAR KOMENTAR LIST */}
+          {/* RENDERING FEED KOTAK DAFTAR KOMENTAR */}
           <div className="space-y-4">
             {comments.length === 0 ? (
               <p className="text-slate-400 text-xs italic font-medium text-center py-6 border border-dashed border-slate-100 rounded-2xl">
