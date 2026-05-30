@@ -31,7 +31,6 @@ const MenuBar = ({ editor }: { editor: any }) => {
         Italic
       </button>
       
-      {/* 🔴 FIX: Typo 'inertialStyle =>' resmi dibuang dari sini */}
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
@@ -83,10 +82,10 @@ export default function RichTextEditor({ content, onChange }: { content: string,
     },
   });
 
-  // 🟢 KUNCI AMAN DATA SYNC: Mengisi data lama ke dalam editor begitu data dari Supabase mendarat
+  // 🟢 FIX TYPE ERROR: Menggunakan objek { emitUpdate: false } menggantikan boolean 'false' lama
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content || '<p></p>', false);
+      editor.commands.setContent(content || '<p></p>', { emitUpdate: false });
     }
   }, [content, editor]);
 
