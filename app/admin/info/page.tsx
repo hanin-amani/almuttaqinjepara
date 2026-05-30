@@ -12,8 +12,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
 export default function InfoPage() {
   const [infos, setInfos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,17 +23,19 @@ export default function InfoPage() {
     setError(null);
 
     try {
+      // 🟢 ANTI-CACHE REALTIME: Menembak API lokal dengan parameter timestamp
       const res = await fetch(`/api/info?t=${Date.now()}`, {
         cache: "no-store",
       });
 
-      if (!res.ok) throw new Error("Gagal mengambil data dari server");
+      if (!res.ok) throw new Error("Gagal mengambil daftar warta dari server");
 
       const data = await res.json();
       setInfos(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      console.error("Gagal load data:", err);
-      setError(err.message);
+      console.error("Gagal load data warta:", err);
+      setError(err.message || "Koneksi database Supabase baru tersendat.");
+      setInfos([]); // Pasang fallback array kosong agar map tidak pecah
     } finally {
       setLoading(false);
     }
@@ -58,10 +58,11 @@ export default function InfoPage() {
       if (res.ok) {
         setInfos((prev) => prev.filter((item) => item.id !== id));
       } else {
-        alert("Gagal menghapus. Cek log server.");
+        alert("Gagal menghapus warta. Cek log server/Supabase baru antum.");
       }
-    } catch {
-      alert("Gagal menghapus koneksi terputus.");
+    } catch (err) {
+      console.error("Error Delete:", err);
+      alert("Gagal menghapus, koneksi internet terputus.");
     } finally {
       setDeletingId(null);
     }
@@ -78,10 +79,10 @@ export default function InfoPage() {
     );
 
   return (
-    <div className="p-6 max-w-7xl mx-auto text-left">
+    <div className="p-6 max-w-7xl mx-auto text-left font-sans">
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-slate-900 p-8 rounded-[4px] shadow-2xl border-b-4 border-emerald-500 relative overflow-hidden">
-        <div className="absolute top-0 right-0 opacity-10 translate-x-10 -translate-y-10">
+        <div className="absolute top-0 right-0 opacity-10 translate-x-10 -translate-y-10 text-slate-400">
           <FileText size={200} />
         </div>
 
@@ -90,7 +91,7 @@ export default function InfoPage() {
             Manajemen <span className="text-emerald-400">Warta Pondok</span>
           </h1>
 
-          {/* FIX HYDRATION ERROR */}
+          {/* ✅ SINKRONISASI SAKELAR HYDRATION */}
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
             Total {infos.length} Berita Terarsip
@@ -127,7 +128,7 @@ export default function InfoPage() {
 
           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2 max-w-xs leading-relaxed">
             Daftar berita masih kosong atau sedang bermasalah. Coba tambahkan
-            berita baru atau cek koneksi Supabase.
+            berita baru atau cek koneksi Supabase baru antum.
           </p>
 
           <button
@@ -209,8 +210,9 @@ export default function InfoPage() {
 
                     <td className="p-6 text-right">
                       <div className="flex justify-end gap-3">
+                        {/* ✅ PERBAIKAN RUTE: Mengarahkan tepat ke folder /admin/info/edit/[id]/page.tsx */}
                         <Link
-                          href={`/admin/info/${info.id}/edit`}
+                          href={`/admin/info/edit/${info.id}`}
                           className="p-3 bg-slate-900 text-emerald-400 rounded-[4px] hover:bg-emerald-600 hover:text-white transition-all shadow-lg active:scale-90"
                         >
                           <Pencil size={14} />

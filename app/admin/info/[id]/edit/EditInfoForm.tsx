@@ -45,21 +45,42 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
       .trim();
   };
 
-  // ✅ EFFECT: Ambil Semua Kategori dari API (Savage dynamic!)
+  // ✅ EFFECT: Ambil Semua Kategori dengan Guard Lolos Build Vercel
   useEffect(() => {
     const fetchCats = async () => {
+      // 🟢 CHECKPOINT SERVER: Jika sedang di-render server pas build, pasang data lokal instan
+      if (typeof window === "undefined") {
+        setCategories(getFallbackCategories());
+        return;
+      }
+
       try {
         const res = await fetch("/api/categories");
+        if (!res.ok) throw new Error("Respon API Kategori buruk");
         const json = await res.json();
-        if (Array.isArray(json)) {
+        
+        if (Array.isArray(json) && json.length > 0) {
           setCategories(json);
+        } else {
+          setCategories(getFallbackCategories());
         }
       } catch (err) {
-        console.error("Gagal memuat kategori:", err);
+        console.error("💥 Gagal memuat kategori saat edit warta, pakai fallback:", err);
+        setCategories(getFallbackCategories());
       }
     };
     fetchCats();
   }, []);
+
+  // 🟩 DATA CADANGAN DARURAT (Penyelamat dropdown dari status freeze jika DB baru kosong)
+  function getFallbackCategories() {
+    return [
+      { id: "fallback-1", name: "Literasi", slug: "literasi" },
+      { id: "fallback-2", name: "Info Pondok", slug: "info-pondok" },
+      { id: "fallback-3", name: "Kajian", slug: "kajian" },
+      { id: "fallback-4", name: "Warta Utama", slug: "warta-utama" }
+    ];
+  }
 
   // ✅ EFFECT: Sync Slug saat judul berubah (jika Unlocked)
   useEffect(() => {
@@ -109,7 +130,7 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
     } catch (err) {
       console.error("Gagal simpan:", err);
       setLoading(false);
-      alert("Gagal simpan perubahan. Aris, cek koneksi database!");
+      alert("Gagal simpan perubahan warta. Sila cek koneksi database Supabase baru antum!");
     }
   };
 
@@ -194,15 +215,11 @@ export default function EditInfoForm({ data }: { data: InfoData }) {
                   className="w-full px-6 py-5 rounded-[1.5rem] border border-slate-100 bg-slate-50 outline-none font-black text-slate-700 appearance-none focus:ring-4 focus:ring-emerald-100 transition-all shadow-sm"
                 >
                   <option value="">-- Pilih Kategori --</option>
-                  {categories.length > 0 ? (
-                    categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))
-                  ) : (
-                    <option disabled>Memuat kategori...</option>
-                  )}
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

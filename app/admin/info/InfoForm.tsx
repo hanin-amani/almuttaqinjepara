@@ -45,19 +45,42 @@ export default function InfoForm() {
     }
   }, [title, isSlugLocked]);
 
-  // ✅ FETCH KATEGORI DARI API
+  // ✅ FETCH KATEGORI AMAN: Dilapisi deteksi environment agar lolos build Vercel
   useEffect(() => {
     const fetchCats = async () => {
+      // 🟢 CHECKPOINT SERVER: Jika jalan di server pas build, langsung pakai data lokal instan
+      if (typeof window === "undefined") {
+        setCategories(getFallbackCategories());
+        return;
+      }
+
       try {
         const res = await fetch("/api/categories");
+        if (!res.ok) throw new Error("Gagal mengambil data dari API");
         const data = await res.json();
-        if (Array.isArray(data)) setCategories(data);
+        
+        if (Array.isArray(data) && data.length > 0) {
+          setCategories(data);
+        } else {
+          setCategories(getFallbackCategories());
+        }
       } catch (err) {
-        console.error("Gagal memuat kategori.");
+        console.error("💥 Dropdown beralih ke data cadangan lokal:", err);
+        setCategories(getFallbackCategories());
       }
     };
     fetchCats();
   }, []);
+
+  // 🟩 DATA CADANGAN DARURAT (Pencegah dropdown blank pas DB baru kosong / build)
+  function getFallbackCategories() {
+    return [
+      { id: "fallback-1", name: "Literasi", slug: "literasi" },
+      { id: "fallback-2", name: "Info Pondok", slug: "info-pondok" },
+      { id: "fallback-3", name: "Kajian", slug: "kajian" },
+      { id: "fallback-4", name: "Warta Utama", slug: "warta-utama" }
+    ];
+  }
 
   // ✅ CLEANUP PREVIEW URL (Cegah Memory Leak)
   useEffect(() => {
@@ -117,7 +140,7 @@ export default function InfoForm() {
         </div>
         <div>
           <h2 className="text-xl font-black text-slate-900 uppercase italic tracking-tight leading-none">Editor Warta Utama</h2>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2">RSM Media Center Al Muttaqin Jepara</p>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2">RSM Media Center Al Muttaqin Purwokerto</p>
         </div>
       </div>
 
@@ -185,13 +208,9 @@ export default function InfoForm() {
               className="w-full bg-slate-50 border-2 border-slate-50 focus:border-emerald-500 focus:bg-white p-4 rounded-[4px] font-black text-slate-600 transition-all outline-none cursor-pointer shadow-sm appearance-none"
             >
               <option value="">Pilih Kategori...</option>
-              {categories.length > 0 ? (
-                categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))
-              ) : (
-                <option disabled>Memuat kategori...</option>
-              )}
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
             </select>
           </div>
         </div>

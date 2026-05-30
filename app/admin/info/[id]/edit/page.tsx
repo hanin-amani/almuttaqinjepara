@@ -2,20 +2,31 @@ import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EditInfoForm from "./EditInfoForm";
 
+// 🟢 MANTRA KEAMANAN MUTLAK: Mengunci halaman edit ke dinamis penuh agar lolos build Vercel tanpa drama
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 export default async function EditInfoPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  // 1. Ambil ID dari params (Next.js 16 mewajibkan await)
+  // 1. Ambil ID dari params (Next.js 15/16 mewajibkan await)
   const { id } = await params;
+  let article = null;
 
-  // 2. Ambil data artikel dari database Prisma
-  const article = await prisma.info.findUnique({
-    where: { id: id },
-  });
+  try {
+    // 2. Ambil data artikel dari database Prisma dengan pengaman try-catch
+    article = await prisma.info.findUnique({
+      where: { id: id },
+    });
+  } catch (error) {
+    // ✅ AMAN: Jika UUID tidak valid atau database tersendat, log eror ditangkap & halaman dialirkan ke 404 tanpa crash putih!
+    console.error("💥 Gagal mengambil data artikel edit dari Supabase baru:", error);
+    article = null;
+  }
 
-  // 3. Jika artikel tidak ditemukan, tampilkan halaman 404
+  // 3. Jika artikel tidak ditemukan atau database error, tampilkan halaman 404 secara rapi
   if (!article) {
     notFound();
   }

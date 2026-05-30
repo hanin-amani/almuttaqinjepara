@@ -1,26 +1,52 @@
-"use client"; // Wajib ada untuk tombol interaktif
+"use client";
 
+import { useFormStatus } from "react-dom";
 import { deleteInfo } from "./actions";
+import { Loader2, Trash2 } from "lucide-react";
+
+// 🟢 SUB-KOMPONEN INTERNAL: Dibuat terpisah agar useFormStatus bisa mendeteksi form induknya
+function SubmitFormButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className={`w-12 h-12 rounded-2xl border transition-all flex items-center justify-center shadow-sm active:scale-95 ${
+        pending
+          ? "bg-slate-100 text-slate-400 border-slate-200 cursor-wait animate-pulse"
+          : "bg-white hover:bg-red-50 text-red-500 border-slate-100 hover:scale-105"
+      }`}
+      title={pending ? "Sedang Menghapus..." : "Hapus Artikel"}
+    >
+      {pending ? (
+        <Loader2 size={18} className="animate-spin text-red-500" />
+      ) : (
+        <Trash2 size={18} strokeWidth={2.5} />
+      )}
+    </button>
+  );
+}
 
 export default function DeleteButton({ id }: { id: string }) {
-  const handleDelete = (e: React.FormEvent) => {
-    if (!confirm("Yakin ingin menghapus warta ini? Materi yang dihapus tidak bisa dikembalikan.")) {
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    // 🚀 CEGATAN VALIDASI: Konfirmasi mutlak di level Form Event agar Next.js Action aman dari klik tidak sengaja
+    const confirmDelete = window.confirm(
+      "Yakin ingin menghapus warta ini? Materi yang dihapus akan sirna selamanya dari database RSM dan tidak bisa dikembalikan."
+    );
+    
+    if (!confirmDelete) {
       e.preventDefault();
     }
   };
 
   return (
-    <form action={deleteInfo} onSubmit={handleDelete}>
+    <form action={deleteInfo} onSubmit={handleFormSubmit} className="inline-block">
+      {/* Pengiriman ID unik UUID warta secara aman via hidden input */}
       <input type="hidden" name="id" value={id} />
-      <button 
-        type="submit"
-        className="bg-white hover:bg-red-50 text-red-500 w-12 h-12 rounded-2xl border border-slate-100 flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-sm"
-        title="Hapus Artikel"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-        </svg>
-      </button>
+      
+      {/* Tombol dengan indikator pending loading otomatis */}
+      <SubmitFormButton />
     </form>
   );
 }

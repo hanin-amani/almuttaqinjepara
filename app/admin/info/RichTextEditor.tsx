@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder'; // Untuk pesan kosong yang profesional
-import Image from '@tiptap/extension-image'; // Sesuai dengan library yang antum instal
+import Placeholder from '@tiptap/extension-placeholder';
+import Image from '@tiptap/extension-image';
 
 // Komponen Toolbar yang Sticky & Modern
 const MenuBar = ({ editor }: { editor: any }) => {
@@ -32,7 +33,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        className={`${btnStyle} ${editor.isActive('heading', { level: 2 }) ? activeStyle : inactiveStyle}`}
+        className={`${btnStyle} ${editor.isActive('heading', { level: 2 }) ? activeStyle : inertialStyle => inactiveStyle}`}
       >
         H2
       </button>
@@ -60,12 +61,12 @@ export default function RichTextEditor({ content, onChange }: { content: string,
       StarterKit,
       Image,
       Placeholder.configure({
-        placeholder: 'Tuliskan isi warta pondok di sini...', // Mengganti fungsi placeholder Quill
+        placeholder: 'Tuliskan isi warta pondok di sini...',
       }),
     ],
     content: content,
     
-    // PERBAIKAN KRUSIAL: Mencegah error SSR/Hydration pada Next.js
+    // PERBAIKAN KRUSIAL Next.js SSR
     immediatelyRender: false,
 
     onUpdate: ({ editor }) => {
@@ -73,11 +74,18 @@ export default function RichTextEditor({ content, onChange }: { content: string,
     },
     editorProps: {
       attributes: {
-        // Styling area ketik agar rapi dan profesional (Clean White Style)
-        class: 'prose prose-emerald max-w-none focus:outline-none p-10 min-h-full cursor-text text-slate-700 leading-relaxed',
+        // Styling area ketik + injeksi CSS placeholder agar teks samaran muncul redup saat kosong
+        class: 'prose prose-emerald max-w-none focus:outline-none p-10 min-h-full cursor-text text-slate-700 leading-relaxed [&_p.is-editor-empty:first-child]:before:text-slate-400 [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:pointer-events-none',
       },
     },
   });
+
+  // 🟢 KUNCI AMAN DATA SYNC: Mengisi data lama ke dalam editor begitu data dari Supabase mendarat
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content || '<p></p>', false);
+    }
+  }, [content, editor]);
 
   return (
     <div className="border border-slate-200 bg-white rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col h-[550px]">
@@ -89,7 +97,7 @@ export default function RichTextEditor({ content, onChange }: { content: string,
         <EditorContent editor={editor} />
       </div>
 
-      {/* Footer Editor (Identitas Pondok) */}
+      {/* Footer Editor */}
       <div className="px-6 py-2 bg-slate-50 border-t border-slate-100 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-right">
         Editor Warta Al Muttaqin Jepara
       </div>
