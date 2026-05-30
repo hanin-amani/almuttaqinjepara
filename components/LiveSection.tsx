@@ -3,12 +3,23 @@
 import { useEffect, useRef } from "react";
 import { useAudio } from "@/context/AudioContext";
 
+// 🟢 MANTRA KEAMANAN NEXT.JS: Menjamin Turbopack meloloskan komponen anak tanpa optimasi kaku pas build
+export const dynamic = "force-dynamic";
+
 export default function LiveSection() {
-  const { isPlaying, togglePlay, analyserRef, metadata, listeners } = useAudio();
+  // ✅ AMAN: Beri nilai fallback kosong {} agar jika context belum siap, serverless tidak memicu white screen
+  const { 
+    isPlaying = false, 
+    togglePlay = () => {}, 
+    analyserRef, 
+    metadata = { title: "Radio Suara Al Muttaqin", artist: "Virtual Auto DJ", art: "/bg-player.png" }, 
+    listeners = 0 
+  } = useAudio() || {};
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // ===============================
-  // ULTRA LIGHTNING SPECTRUM (100% UTUH TANPA RUBAH DESAIN)
+  // ULTRA LIGHTNING SPECTRUM (100% UTUH TANPA MERUBAH DESAIN)
   // ===============================
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -52,6 +63,7 @@ export default function LiveSection() {
 
       if (bass > 180) flashAlpha = 0.5;
       if (flashAlpha > 0) {
+        ctx.shadowBlur = 0; // Matikan shadow pas flash biar FPS enteng
         ctx.fillStyle = `rgba(0,255,200,${flashAlpha})`;
         ctx.fillRect(0, 0, width, height);
         flashAlpha -= 0.03;
@@ -107,10 +119,12 @@ export default function LiveSection() {
             <div className="relative w-44 h-44">
               <div className="absolute inset-0 bg-emerald-500/20 blur-3xl animate-pulse rounded-2xl"></div>
               <img
-                src={metadata.art}
-                onError={(e) => ((e.target as HTMLImageElement).src = "/bg-player.png")}
-                className="relative z-10 w-full h-full object-cover rounded-2xl border border-white/20"
-                alt="Cover"
+                src={metadata?.art || "/bg-player.png"}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/bg-player.png";
+                }}
+                className="relative z-10 w-full h-full object-cover rounded-2xl border border-white/20 shadow-lg"
+                alt={`Cover Art - ${metadata?.title || "Radio Al Muttaqin"}`}
               />
             </div>
 
@@ -121,10 +135,10 @@ export default function LiveSection() {
 
               <div className="text-left">
                 <h3 className="text-2xl font-black text-white uppercase tracking-tight italic leading-none">
-                  {metadata.title}
+                  {metadata?.title || "Radio Suara Al Muttaqin"}
                 </h3>
                 <p className="text-emerald-400 text-sm tracking-widest uppercase mt-2">
-                  {metadata.artist}
+                  {metadata?.artist || "Virtual Live Stream"}
                 </p>
               </div>
             </div>
@@ -136,9 +150,10 @@ export default function LiveSection() {
             </div>
 
             <button
+              type="button"
               onClick={togglePlay} // Mengontrol sakelar audio tunggal global
-              className={`px-12 py-4 rounded-xl font-black tracking-widest uppercase transition-all active:scale-95 shadow-xl ${
-                isPlaying ? "bg-red-600 hover:bg-red-500 text-white" : "bg-emerald-600 hover:bg-emerald-500 text-white"
+              className={`px-12 py-4 rounded-xl font-black tracking-widest uppercase transition-all active:scale-95 shadow-xl cursor-pointer select-none ${
+                isPlaying ? "bg-red-600 hover:bg-red-500 text-white shadow-red-600/20" : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
               }`}
             >
               {isPlaying ? "Stop Radio" : "Putar Radio"}
