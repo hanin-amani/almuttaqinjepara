@@ -2,75 +2,116 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 /**
- * GET: Mengambil diskusi netizen
+ * GET COMMENTS
  */
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const infoId = searchParams.get("infoId");
-
-  if (!infoId) return NextResponse.json([], { status: 200 });
-
   try {
+    const { searchParams } = new URL(req.url);
+    const infoId = searchParams.get("infoId");
+
+    if (!infoId) {
+      return NextResponse.json([], { status: 200 });
+    }
+
     const comments = await prisma.comment.findMany({
-      where: { 
-        info_id: infoId, 
-        is_approved: true 
+      where: {
+        info_id: String(infoId),
+        is_approved: true,
       },
-      // Urutan ASC agar obrolan mengalir ke bawah (balasan di bawah bapaknya)
-      orderBy: { created_at: "asc" } 
+      orderBy: {
+        created_at: "asc",
+      },
     });
-    return NextResponse.json(comments);
-  } catch (error) {
+
+    return NextResponse.json(comments, { status: 200 });
+  } catch (error: any) {
     console.error("GET_COMMENTS_ERROR:", error);
-    return NextResponse.json([], { status: 500 });
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || "Gagal mengambil komentar",
+      },
+      {
+        status: 500,
+      }
+    );
   }
 }
 
 /**
- * POST: Simpan Komentar atau Balasan
+ * POST COMMENT
  */
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { infoId, name, email, content, website, image, parent_id } = body;
 
-    // Validasi input wajib
-    if (!infoId || !content || !name) {
+    const {
+      infoId,
+      name,
+      email,
+      content,
+      website,
+      image,
+      parent_id,
+    } = body;
+
+    if (!infoId || !name || !content) {
       return NextResponse.json(
-        { success: false, message: "Data tidak lengkap" }, 
-        { status: 400 }
+        {
+          success: false,
+          message: "Data tidak lengkap",
+        },
+        {
+          status: 400,
+        }
       );
     }
 
-    // ✅ FIX UUID: Pastikan parent_id dan info_id adalah UUID valid atau null
-    // Database UUID tidak mau menerima string kosong ""
-    const validParentId = parent_id && parent_id.length > 10 ? parent_id : null;
+    let validParentId = null;
+
+    if (
+      parent_id &&
+      parent_id !== "" &&
+      parent_id !== "null" &&
+      parent_id !== "undefined"
+    ) {
+      validParentId = parent_id;
+    }
 
     const newComment = await prisma.comment.create({
       data: {
-        info_id: infoId,
-        name: name,
+        info_id: String(infoId),
+        name: String(name),
         email: email || "guest@rsm.id",
-        content: content,
+        content: String(content),
         website: website || null,
-        image: image || null, 
-        parent_id: validParentId, // ✅ Gunakan hasil filter di atas
-        is_approved: true, 
+        image: image || null,
+        parent_id: validParentId,
+        is_approved: true,
       },
     });
 
-    return NextResponse.json({ success: true, data: newComment });
-  } catch (error: any) {
-    // ⚠️ LIHAT TERMINAL VS CODE: Jika gagal, pesan error asli akan muncul di sana
-    console.error("POST_COMMENT_ERROR:", error.message);
-    
     return NextResponse.json(
-      { 
-        success: false, 
-        error: "Gagal simpan. Pastikan migrasi database sudah selesai.",
-        details: error.message 
-      }, 
-      { status: 500 }
+      {
+        success: true,
+        data: newComment,
+      },
+      {
+        status: 201,
+      }
+    );
+  } catch (error: any) {
+    console.error("POST_COMMENT_ERROR:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || "Gagal menyimpan komentar",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

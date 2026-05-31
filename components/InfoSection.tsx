@@ -30,7 +30,7 @@ export default function InfoSection() {
           setArticles(data.items || []);
         }
       } catch (err) {
-        console.error("💥 Gagal load warta untuk seksi beranda:", err);
+        console.error("💥 Gagal load blog untuk seksi beranda:", err);
       } finally {
         setLoading(false);
       }
@@ -43,6 +43,15 @@ export default function InfoSection() {
   const extractFirstImage = (htmlContent: string) => {
     const match = htmlContent.match(/<img[^>]+src="([^">]+)"/);
     return match ? match[1] : null;
+  };
+
+  // 🚀 FUNGSI BARU: Mengekstrak slug bersih dari URL bawaan Blogger
+  // Contoh: "https://xxx.blogspot.com/2026/05/kegiatan-ramadhan-pondok.html" -> "kegiatan-ramadhan-pondok"
+  const extractSlugFromUrl = (url: string) => {
+    if (!url) return "";
+    const parts = url.split("/");
+    const lastPart = parts[parts.length - 1]; // Mengambil "kegiatan-ramadhan-pondok.html"
+    return lastPart.replace(".html", ""); // Menghapus ".html"
   };
 
   if (loading) {
@@ -69,12 +78,12 @@ export default function InfoSection() {
               Kabar <span className="text-emerald-600">Pondok</span>
             </h2>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-2">
-              Update Literasi & Warta Al Muttaqin
+              Update Literasi & Blog Al Muttaqin
             </p>
           </div>
           
           <Link 
-            href="/warta" 
+            href="/blog" 
             className="group flex items-center gap-2 px-6 py-3 bg-slate-900 text-white text-[9px] font-black uppercase tracking-[0.2em] rounded-[4px] hover:bg-emerald-600 transition-all shadow-lg active:scale-95"
           >
             Lihat Semua <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
@@ -85,11 +94,12 @@ export default function InfoSection() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {articles.map((item) => {
             const coverImage = extractFirstImage(item.content);
+            const slug = extractSlugFromUrl(item.url) || item.id; // ✅ Cadangan balik ke ID jika URL kosong
 
             return (
               <Link 
                 key={item.id} 
-                href={`/warta/${item.id}`} // ✅ SINKRON: Menggunakan ID murni Blogger agar langsung tembus ke detail Liputan6
+                href={`/blog/${slug}`} // ✅ SEKARANG SINKRON: Menggunakan Slug untuk URL yang SEO-friendly
                 className="group flex flex-col bg-white rounded-[4px] overflow-hidden border border-slate-100 hover:border-emerald-500/30 shadow-sm hover:shadow-xl transition-all duration-500 text-left"
               >
                 {/* Bagian Thumbnail */}
@@ -100,7 +110,7 @@ export default function InfoSection() {
                       alt={item.title} 
                       loading="lazy"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/bg-player.png"; // Fallback aman jika gambar eksternal brokoli/rusak
+                        (e.target as HTMLImageElement).src = "/bg-player.png"; // Fallback aman jika gambar eksternal rusak
                       }}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
@@ -110,10 +120,10 @@ export default function InfoSection() {
                     </div>
                   )}
                   
-                  {/* Label Kategori Statis karena Blogger Mengandalkan Sistem Labels Dinamis */}
+                  {/* Label Kategori Statis */}
                   <div className="absolute top-3 left-3 z-20">
                     <span className="px-2 py-1 bg-emerald-600 text-white text-[7px] font-black uppercase tracking-wider rounded-[2px]">
-                      Warta
+                      Blog
                     </span>
                   </div>
                 </div>

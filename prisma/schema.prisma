@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  // ✅ UPDATE FIX: Baris previewFeatures ["multiSchema"] dihapus di sini karena sudah stabil bawaan produksi
 }
 
 datasource db {
@@ -10,17 +9,12 @@ datasource db {
   schemas   = ["public"]
 }
 
-/////////////////////////////////////////////////////
-// PUBLIC SCHEMA (APLIKASI RADIO)
-/////////////////////////////////////////////////////
-
-// ✅ VIRTUAL RADIO STREAM (Solusi Baru Anti-VPS & Anti-Digest Error)
 model RadioStream {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title           String   // Judul program (misal: "Taujih Pagi")
-  audio_url       String   // URL file .mp3 / .m4a dari Hosting / Supabase Storage
-  start_time      DateTime @default(now()) // Waktu mulai siaran serempak
-  duration        Int      // Durasi file audio dalam satuan detik
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title      String
+  audio_url  String
+  start_time DateTime @default(now())
+  duration   Int
 
   @@map("radio_streams")
   @@schema("public")
@@ -30,8 +24,8 @@ model Schedule {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   program_name String
   day          String
-  start_time   DateTime @db.Time
-  end_time     DateTime @db.Time
+  start_time   DateTime @db.Time(6)
+  end_time     DateTime @db.Time(6)
   created_at   DateTime @default(now())
 
   @@map("schedules")
@@ -60,34 +54,22 @@ model ChatMessage {
   @@schema("public")
 }
 
-/////////////////////////////////////////////////////
-// SISTEM ARTIKEL / BERITA
-/////////////////////////////////////////////////////
-
 model Info {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title       String
-  slug        String   @unique
+  slug        String        @unique
   excerpt     String?
-  content     String   @db.Text
+  content     String
   thumbnail   String?
-  
-  // Untuk menyimpan kata kunci (comma separated string)
   tags        String?
-
-  status      String   @default("published")
-  is_active   Boolean  @default(true)
-
-  category_id String?  @db.Uuid
-  author_id   String?  @db.Uuid
-
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  category    InfoCategory? @relation(fields: [category_id], references: [id], onDelete: SetNull)
-  author      Profile?      @relation("AuthorInfo", fields: [author_id], references: [id], onDelete: SetNull)
-  
-  comments    Comment[]
+  status      String        @default("published")
+  is_active   Boolean       @default(true)
+  category_id String?       @db.Uuid
+  author_id   String?       @db.Uuid
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+  author      Profile?      @relation("AuthorInfo", fields: [author_id], references: [id])
+  category    InfoCategory? @relation(fields: [category_id], references: [id])
 
   @@index([slug])
   @@index([category_id])
@@ -96,46 +78,33 @@ model Info {
 }
 
 model InfoCategory {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String
-  slug        String   @unique
-  created_at  DateTime @default(now())
-
-  infos       Info[]
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  slug       String   @unique
+  created_at DateTime @default(now())
+  infos      Info[]
 
   @@index([slug])
   @@map("info_categories")
   @@schema("public")
 }
 
-/////////////////////////////////////////////////////
-// SISTEM KOMENTAR (SUARA PEMBACA)
-/////////////////////////////////////////////////////
-
 model Comment {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
-  email       String   
-  website     String?  
-  image       String?  // Untuk menyimpan URL Avatar/Foto Profil
-  content     String   @db.Text
-  info_id     String   @db.Uuid
-  is_approved Boolean  @default(true)
-  
-  // Relasi ke User (Jika login)
-  user_id     String?  @db.Uuid
-  user        User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
-
-  // SISTEM BALASAN (Self-Relation)
+  email       String
+  website     String?
+  image       String?
+  content     String
+  info_id     String
+  is_approved Boolean   @default(true)
+  user_id     String?   @db.Uuid
   parent_id   String?   @db.Uuid
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
   parent      Comment?  @relation("CommentReplies", fields: [parent_id], references: [id], onDelete: Cascade)
   replies     Comment[] @relation("CommentReplies")
-
-  // Relasi ke Artikel/Warta
-  info        Info      @relation(fields: [info_id], references: [id], onDelete: Cascade)
-
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  user        User?     @relation(fields: [user_id], references: [id])
 
   @@index([info_id])
   @@index([parent_id])
@@ -143,20 +112,15 @@ model Comment {
   @@schema("public")
 }
 
-/////////////////////////////////////////////////////
-// AUTHENTICATION (NEXT-AUTH MODELS)
-/////////////////////////////////////////////////////
-
 model User {
   id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name          String?
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-  
   accounts      Account[]
-  sessions      Session[]
   comments      Comment[]
+  sessions      Session[]
 
   @@map("users")
   @@schema("public")
@@ -168,15 +132,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -204,17 +167,13 @@ model VerificationToken {
   @@schema("public")
 }
 
-/////////////////////////////////////////////////////
-// ADMIN & STATISTIK
-/////////////////////////////////////////////////////
-
 model Admin {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email       String    @unique
-  password    String
-  role        String    @default("admin")
-  last_login  DateTime?
-  created_at  DateTime  @default(now())
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String    @unique
+  password   String
+  role       String    @default("admin")
+  last_login DateTime?
+  created_at DateTime  @default(now())
 
   @@map("admins")
   @@schema("public")
@@ -232,8 +191,7 @@ model Profile {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   role       String   @default("penyiar")
   created_at DateTime @default(now())
-
-  infos      Info[] @relation("AuthorInfo")
+  infos      Info[]   @relation("AuthorInfo")
 
   @@map("profiles")
   @@schema("public")
