@@ -4,189 +4,295 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { LogIn, LogOut, Loader2, Heart, Menu, X } from "lucide-react";
+
+import {
+  LogIn,
+  LogOut,
+  Loader2,
+  Heart,
+  Menu,
+  X,
+  Search,
+} from "lucide-react";
 
 export default function Navbar() {
   const router = useRouter();
+
   const [user, setUser] = useState<any>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const navLinks = [
     { name: "Beranda", path: "/" },
-    { name: "Warta", path: "/warta" },
+    { name: "Blog", path: "/blog" },
     { name: "Jadwal", path: "/jadwal" },
     { name: "Komunitas", path: "/komunitas" },
   ];
 
   useEffect(() => {
-    // 🟢 SINKRONISASI SESI SUPABASE: Ambil status login jemaah secara instan & real-time
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoadingAuth(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoadingAuth(false);
-    });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+        setLoadingAuth(false);
+      }
+    );
 
     return () => subscription.unsubscribe();
   }, []);
 
   const handleLogout = async () => {
     setLoadingAuth(true);
+
     await supabase.auth.signOut();
+
     setIsMenuOpen(false);
+
     router.refresh();
   };
 
-  // Ekstrak nama panggilan jemaah untuk sapaan hangat di menu mobile
+  const handleSearch = (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
+    e.preventDefault();
+
+    if (!searchQuery.trim()) return;
+
+    router.push(
+      `/search?q=${encodeURIComponent(searchQuery)}`
+    );
+
+    setIsMenuOpen(false);
+  };
+
   const getShortName = () => {
     if (!user) return "";
-    const fullName = user.user_metadata?.full_name || user.user_metadata?.name || "Jemaah";
+
+    const fullName =
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      "Jemaah";
+
     return fullName.split(" ")[0];
   };
 
-  // Ekstrak foto profil avatar asli dari Google / GitHub
   const getAvatarUrl = () => {
-    return user?.user_metadata?.avatar_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80";
+    return (
+      user?.user_metadata?.avatar_url ||
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+    );
   };
 
   return (
-    <header className="sticky top-0 z-[100] w-full bg-white/90 backdrop-blur-xl border-b border-slate-200/60 shadow-[0_15px_50px_rgba(0,0,0,0.05)] transition-all duration-300 font-sans">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex justify-between items-center">
-        
-        {/* LOGO SECTION */}
-        <div className="flex flex-col">
-          <Link href="/" className="group flex items-center gap-2 md:gap-3">
-            <span className="text-xl md:text-2xl transition-transform duration-300 group-hover:rotate-12">
+    <header className="sticky top-0 z-[999] bg-white border-b border-slate-200 shadow-sm">
+
+      {/* NAVBAR */}
+      <div className="max-w-7xl mx-auto px-3">
+
+        <div className="h-[50px] flex items-center justify-between">
+
+          {/* LOGO */}
+          <Link
+            href="/"
+            className="flex items-center gap-2 overflow-hidden flex-1 min-w-0"
+          >
+            <span className="text-base shrink-0">
               🎙️
             </span>
-            <div className="flex flex-col text-left">
-              <h1 className="text-sm md:text-lg font-black text-slate-900 uppercase italic leading-none tracking-tighter">
-                Radio Suara <span className="text-emerald-600">Al Muttaqin</span>
-              </h1>
-              <p className="text-[8px] md:text-[10px] text-emerald-600/80 font-bold uppercase tracking-[0.15em] mt-1">
-                Menginspirasi hati, menguatkan iman
-              </p>
-            </div>
-          </Link>
-        </div>
 
-        {/* DESKTOP NAV LINKS */}
-        <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map((item) => (
-            <Link
-              key={item.name}
-              href={item.path}
-              className="text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-emerald-600 transition-colors relative group"
-            >
-              {item.name}
-              <span className="absolute -bottom-1 left-0 w-0 h-[1.5px] bg-emerald-500 transition-all duration-300 group-hover:w-full"></span>
-            </Link>
-          ))}
-        </nav>
-
-        {/* ACTIONS SECTION (DESKTOP) */}
-        <div className="hidden md:flex items-center gap-3 pl-4 border-l border-slate-100">
-          <Link
-            href="/donasi"
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-[4px] text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-100 active:scale-95"
-          >
-            <Heart size={12} fill="currentColor" /> Donasi
+            <h1 className="font-black text-[12px] sm:text-sm text-slate-900 truncate">
+              Radio Suara{" "}
+              <span className="text-emerald-600">
+                Al Muttaqin
+              </span>
+            </h1>
           </Link>
 
-          {loadingAuth ? (
-            <div className="w-9 h-9 flex items-center justify-center">
-              <Loader2 className="animate-spin text-slate-300" size={16} />
-            </div>
-          ) : user ? (
-            // 🟢 TAMPILAN BERUBAH LOGOUT: Aktif jika jemaah terdeteksi sudah login via Supabase
-            <div className="flex items-center gap-2.5 animate-in fade-in duration-300">
-              <div className="relative w-8 h-8 rounded-[4px] overflow-hidden border border-slate-200">
-                <img 
-                  src={getAvatarUrl()} 
-                  alt="User Avatar" 
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80";
-                  }}
-                />
-              </div>
-              <button 
-                onClick={handleLogout} 
-                title={`Logout (${getShortName()})`}
-                className="flex items-center gap-1.5 bg-red-50 hover:bg-red-600 text-red-500 hover:text-white px-3 py-2 rounded-[4px] text-[9px] font-black uppercase tracking-widest transition-all border border-red-100/50"
-              >
-                <LogOut size={11} strokeWidth={2.5} /> Logout
-              </button>
-            </div>
-          ) : (
-            // TAMPILAN RED LOGIN: Aktif jika jemaah murni tamu/anonim
-            <Link 
-              href="/login"
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-[4px] text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-100 active:scale-95 animate-in fade-in duration-300"
+          {/* MOBILE ACTION */}
+          <div className="flex lg:hidden items-center shrink-0 gap-1 ml-2">
+
+            {user && (
+              <img
+                src={getAvatarUrl()}
+                alt="avatar"
+                className="w-7 h-7 rounded-full object-cover"
+              />
+            )}
+
+            <button
+              onClick={() =>
+                setIsMenuOpen(!isMenuOpen)
+              }
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100"
             >
-              <LogIn size={12} strokeWidth={3} /> Login
-            </Link>
-          )}
-        </div>
+              {isMenuOpen ? (
+                <X size={20} />
+              ) : (
+                <Menu size={20} />
+              )}
+            </button>
 
-        {/* HAMBURGER BUTTON (MOBILE) */}
-        <button 
-          className="md:hidden p-2 text-slate-900 focus:outline-none"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
+          </div>
 
-      {/* MOBILE MENU DROPDOWN */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-white border-t border-slate-100 p-6 space-y-6 animate-in slide-in-from-top-2 duration-300">
-          <div className="flex flex-col gap-4">
+          {/* DESKTOP */}
+          <div className="hidden lg:flex items-center gap-8">
+
             {navLinks.map((item) => (
               <Link
                 key={item.name}
                 href={item.path}
-                onClick={() => setIsMenuOpen(false)}
-                className="text-xs font-black uppercase tracking-[0.2em] text-slate-600 border-b border-slate-50 pb-2 text-left"
+                className="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-emerald-600"
               >
                 {item.name}
               </Link>
             ))}
-          </div>
-          
-          <div className="flex flex-col gap-3 pt-4">
+
+            <form
+              onSubmit={handleSearch}
+              className="relative"
+            >
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) =>
+                  setSearchQuery(e.target.value)
+                }
+                placeholder="Cari artikel..."
+                className="w-64 h-10 rounded-full border border-slate-200 px-4 pr-10 text-sm outline-none focus:border-emerald-500"
+              />
+
+              <button
+                type="submit"
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+              >
+                <Search size={16} />
+              </button>
+            </form>
+
             <Link
               href="/donasi"
-              onClick={() => setIsMenuOpen(false)}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white py-4 rounded-[4px] text-[10px] font-black uppercase tracking-widest shadow-md"
+              className="h-10 px-4 rounded-lg bg-emerald-600 text-white flex items-center gap-2 text-xs font-bold"
             >
-              <Heart size={14} fill="currentColor" /> Donasi Sekarang
+              <Heart
+                size={14}
+                fill="currentColor"
+              />
+              Donasi
             </Link>
-            
+
             {loadingAuth ? (
-              <div className="w-full py-4 flex items-center justify-center">
-                <Loader2 className="animate-spin text-slate-300" size={20} />
-              </div>
-            ) : !user ? (
-              <Link 
-                href="/login"
-                onClick={() => setIsMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 bg-red-600 text-white py-4 rounded-[4px] text-[10px] font-black uppercase tracking-widest shadow-md"
-              >
-                <LogIn size={14} /> Login Jamaah
-              </Link>
-            ) : (
-              <button 
+              <Loader2
+                size={18}
+                className="animate-spin"
+              />
+            ) : user ? (
+              <button
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 bg-red-50 text-red-600 py-4 rounded-[4px] text-[10px] font-black uppercase tracking-widest border border-red-100/40"
+                className="h-10 px-4 rounded-lg bg-red-50 text-red-600 flex items-center gap-2 text-xs font-bold"
               >
-                <LogOut size={14} /> Logout ({getShortName()})
+                <LogOut size={14} />
+                Logout
               </button>
+            ) : (
+              <Link
+                href="/login"
+                className="h-10 px-4 rounded-lg bg-slate-900 text-white flex items-center gap-2 text-xs font-bold"
+              >
+                <LogIn size={14} />
+                Login
+              </Link>
             )}
+          </div>
+
+        </div>
+      </div>
+
+      {/* MOBILE MENU */}
+      {isMenuOpen && (
+        <div className="lg:hidden border-t bg-white shadow-lg">
+
+          <div className="p-4 space-y-4">
+
+            <form
+              onSubmit={handleSearch}
+              className="relative"
+            >
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) =>
+                  setSearchQuery(e.target.value)
+                }
+                placeholder="Cari artikel..."
+                className="w-full h-11 rounded-xl border border-slate-200 px-4 pr-10 text-sm outline-none focus:border-emerald-500"
+              />
+
+              <button
+                type="submit"
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+              >
+                <Search size={16} />
+              </button>
+            </form>
+
+            {user && (
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+
+                <img
+                  src={getAvatarUrl()}
+                  alt="avatar"
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+
+                <div>
+                  <p className="font-semibold text-sm">
+                    {getShortName()}
+                  </p>
+
+                  <p className="text-xs text-slate-500">
+                    Jemaah Terdaftar
+                  </p>
+                </div>
+
+              </div>
+            )}
+
+            <nav className="flex flex-col">
+              {navLinks.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.path}
+                  onClick={() =>
+                    setIsMenuOpen(false)
+                  }
+                  className="py-3 border-b border-slate-100 text-sm font-medium"
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
+
+            <Link
+              href="/donasi"
+              onClick={() =>
+                setIsMenuOpen(false)
+              }
+              className="w-full h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center gap-2 font-bold text-sm"
+            >
+              <Heart
+                size={16}
+                fill="currentColor"
+              />
+              Donasi Sekarang
+            </Link>
+
           </div>
         </div>
       )}

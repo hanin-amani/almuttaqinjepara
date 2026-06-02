@@ -50,6 +50,32 @@ export default function InfoSection() {
     return lastPart.replace(".html", "");
   };
 
+  // WARNA OTOMATIS BERDASARKAN NAMA LABEL
+  const getCategoryColor = (label?: string) => {
+    const colors = [
+      "bg-emerald-600",
+      "bg-blue-600",
+      "bg-red-600",
+      "bg-orange-500",
+      "bg-purple-600",
+      "bg-cyan-600",
+      "bg-pink-600",
+      "bg-yellow-500",
+      "bg-indigo-600",
+      "bg-teal-600",
+    ];
+
+    if (!label) return "bg-slate-900";
+
+    let hash = 0;
+
+    for (let i = 0; i < label.length; i++) {
+      hash += label.charCodeAt(i);
+    }
+
+    return colors[hash % colors.length];
+  };
+
   if (loading) {
     return (
       <div className="py-20 flex flex-col items-center justify-center gap-3">
@@ -90,14 +116,22 @@ export default function InfoSection() {
               className="group-hover:translate-x-1 transition-transform"
             />
           </Link>
+
         </div>
 
-        {/* GRID BERITA */}
+        {/* GRID */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
 
           {articles.map((item) => {
             const coverImage = extractFirstImage(item.content);
             const slug = extractSlugFromUrl(item.url) || item.id;
+
+            const category =
+              item.labels?.length > 0
+                ? item.labels[0]
+                : "Artikel";
+
+            const categoryColor = getCategoryColor(category);
 
             return (
               <Link
@@ -105,7 +139,6 @@ export default function InfoSection() {
                 href={`/blog/${slug}`}
                 className="group block"
               >
-
                 {/* THUMBNAIL */}
                 <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-100 mb-4">
 
@@ -126,12 +159,15 @@ export default function InfoSection() {
                     </div>
                   )}
 
-                  {/* LABEL */}
-                  <div className="absolute top-3 left-3">
-                    <span className="px-2 py-1 bg-emerald-600 text-white text-[8px] font-black uppercase tracking-wider rounded">
-                      Blog
+                  {/* LABEL BLOGGER */}
+                  <div className="absolute top-3 left-3 z-10">
+                    <span
+                      className={`px-3 py-1 rounded-full text-white text-[8px] font-black uppercase tracking-wider shadow-lg ${categoryColor}`}
+                    >
+                      {category}
                     </span>
                   </div>
+
                 </div>
 
                 {/* JUDUL */}
@@ -142,10 +178,13 @@ export default function InfoSection() {
                 {/* TANGGAL */}
                 <p className="mt-2 text-sm text-slate-500">
                   {item.published
-                    ? new Date(item.published).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "long",
-                      })
+                    ? new Date(item.published).toLocaleDateString(
+                        "id-ID",
+                        {
+                          day: "numeric",
+                          month: "long",
+                        }
+                      )
                     : "--"}
                 </p>
 

@@ -1,151 +1,207 @@
 "use client";
-import React, { useState } from "react";
+
+import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
+import {
+  Copy,
+  Check,
+  Heart,
+  MessageCircle,
+} from "lucide-react";
 
 export default function DonasiPage() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const bankAccounts = [
     {
-      bank: "BSI (BANK SYARIAH INDONESIA)",
+      bank: "Bank Syariah Indonesia",
       number: "7120202043",
-      name: "BAITUL MAAL AL MUTTAQIN",
-      logo: "/bsi.png"
+      name: "Baitul Maal Al Muttaqin",
+      logo: "/bsi.png",
     },
     {
-      bank: "BANK BRI",
-      number: "0022 01 028443 53 3",
-      name: "BAITUL MAAL AL MUTTAQIN",
-      logo: "/bri.png"
-    }
+      bank: "Bank Rakyat Indonesia",
+      number: "002201028443533",
+      name: "Baitul Maal Al Muttaqin",
+      logo: "/bri.png",
+    },
   ];
 
-  const waNumber = "6281325182875";
-  const waLink = `https://wa.me/${waNumber}?text=Assalamu'alaikum,%20saya%20ingin%20konfirmasi%20transfer%20donasi%20untuk%20Baitul%20Maal%20Al%20Muttaqin.`;
+  const waLink =
+    "https://wa.me/6281325182875?text=Assalamualaikum,%20saya%20ingin%20konfirmasi%20transfer%20donasi%20untuk%20Baitul%20Maal%20Al%20Muttaqin";
 
-  const handleCopy = (num: string) => {
-    // Menghapus spasi untuk kemudahan copy-paste ke aplikasi bank
-    navigator.clipboard.writeText(num.replace(/\s/g, ''));
-    setCopied(num);
-    setTimeout(() => setCopied(null), 2000);
+  const handleCopy = (number: string) => {
+    navigator.clipboard.writeText(number);
+    setCopied(number);
+
+    setTimeout(() => {
+      setCopied(null);
+    }, 2000);
+  };
+
+  const formatAccount = (value: string) => {
+    return value.replace(/(\d{4})(?=\d)/g, "$1 ");
   };
 
   return (
-    <div className="min-h-screen bg-[#fcfcfc] pb-20 relative overflow-hidden">
-      
-      {/* 1. Header Section - Solid & Clean */}
-      <div className="relative bg-emerald-950 pt-32 pb-44 px-6 text-center">
-        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px]"></div>
-        
-        <div className="relative z-10 max-w-5xl mx-auto">
-          <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">
-            INVESTASI <span className="text-yellow-400">ABADI</span>
-          </h1>
-          <div className="h-2 w-32 bg-yellow-400 mx-auto mt-6 rounded-full shadow-[0_0_25px_rgba(250,204,21,0.7)]" />
-          
-          <p className="mt-10 text-emerald-50 max-w-2xl mx-auto text-lg md:text-xl font-bold leading-relaxed drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-            Dukung perjuangan para pencari ilmu di <span className="text-white underline decoration-yellow-400 decoration-4 underline-offset-8">"Pondok Pesantren Islam Al Muttaqin"</span>. 
-            Setiap bantuan Anda adalah jariyah untuk melahirkan generasi Robbani.
-          </p>
-        </div>
-      </div>
+    <main className="min-h-screen bg-gradient-to-b from-white to-emerald-50">
+      {/* HERO */}
+      <section className="border-b border-slate-100">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
 
-      {/* 2. Area Konten Utama */}
-      <div className="max-w-6xl mx-auto px-6 relative z-20 -mt-20">
-        <div className="grid lg:grid-cols-3 gap-10 md:gap-14">
-          
-          {/* Kolom Kiri: Pilih Rekening */}
-          <div className="lg:col-span-2 space-y-8">
-            <div className="flex items-center gap-4 mb-2">
-              <span className="flex items-center justify-center w-10 h-10 bg-white text-emerald-900 font-black rounded-xl shadow-lg border border-emerald-50">1</span>
-              <h3 className="text-xl font-black text-white md:text-emerald-950 tracking-tight drop-shadow-sm md:drop-shadow-none">Pilih Rekening Transfer</h3>
-            </div>
-            
-            <div className="space-y-6">
-              {bankAccounts.map((acc) => (
-                <div 
-                  key={acc.number}
-                  className="bg-white border border-slate-100 p-8 rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.06)] hover:shadow-2xl transition-all duration-500 flex flex-col md:flex-row justify-between items-center gap-8"
-                >
-                  <div className="flex items-center gap-8 flex-1">
-                    <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center p-3 shadow-inner border border-slate-100 overflow-hidden">
-                      <img src={acc.logo} alt={acc.bank} className="w-full h-auto object-contain" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-emerald-600 font-black text-[10px] uppercase tracking-widest mb-1">{acc.bank}</p>
-                      <p className="text-3xl font-mono font-black text-slate-900 tracking-tighter">{acc.number}</p>
-                      <p className="text-slate-500 text-xs font-bold mt-1 uppercase tracking-tight">a.n {acc.name}</p>
-                    </div>
-                  </div>
-                  
-                  <button 
-                    onClick={() => handleCopy(acc.number)}
-                    className="w-full md:w-auto bg-slate-900 hover:bg-emerald-600 text-white px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-xl active:translate-y-1 active:shadow-none border-b-4 border-slate-700 hover:border-emerald-800 flex items-center justify-center gap-2"
-                  >
-                    {copied === acc.number ? "✅ BERHASIL DISALIN" : "📋 SALIN REKENING"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+            {/* KIRI */}
+            <div>
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2">
+                <Heart
+                  size={15}
+                  className="fill-emerald-600 text-emerald-600"
+                />
 
-          {/* Kolom Kanan: Konfirmasi & Alokasi */}
-          <div className="space-y-10">
-            <div className="flex items-center gap-4 mb-2">
-              <span className="flex items-center justify-center w-10 h-10 bg-white text-emerald-900 font-black rounded-xl shadow-lg border border-emerald-50">2</span>
-              <h3 className="text-xl font-black text-white md:text-emerald-950 tracking-tight drop-shadow-sm md:drop-shadow-none">Konfirmasi</h3>
-            </div>
+                <span className="text-sm font-medium text-emerald-700">
+                  Infaq & Sedekah Jariyah
+                </span>
+              </div>
 
-            <div className="bg-emerald-950 p-10 rounded-3xl text-white shadow-3xl relative overflow-hidden border border-white/5">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
-              
-              <div className="relative z-10 text-left">
-                <h4 className="text-2xl font-black mb-6 italic tracking-tight uppercase">Sudah Transfer?</h4>
-                
-                {/* Daftar Alokasi Donasi */}
-                <div className="mb-10 space-y-4">
-                  <p className="text-yellow-400 text-[10px] font-black uppercase tracking-widest mb-2">Alokasi Donasi:</p>
-                  {[
-                    "Fasilitas Asrama & Konsumsi Santri",
-                    "Pembangunan Sarana Belajar",
-                    "Beasiswa Santri Yatim & Dhuafa"
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5"></div>
-                      <p className="text-emerald-50 text-xs font-semibold leading-relaxed">{item}</p>
-                    </div>
-                  ))}
-                </div>
-                
-                <Link 
-                  href={waLink} 
+              <h1 className="text-4xl font-bold leading-tight text-slate-900 md:text-6xl">
+                Dukung Dakwah
+                <span className="block text-emerald-600">
+                  Al Muttaqin
+                </span>
+              </h1>
+
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
+                Setiap donasi yang Anda salurkan akan digunakan
+                untuk mendukung operasional dakwah, pendidikan,
+                pembinaan santri, serta pengembangan Pondok
+                Pesantren Islam Al Muttaqin.
+              </p>
+
+              <div className="mt-8">
+                <Link
+                  href={waLink}
                   target="_blank"
-                  className="block w-full bg-yellow-400 hover:bg-yellow-300 text-emerald-950 text-center py-5 rounded-xl font-black uppercase tracking-widest shadow-[0_8px_0_rgb(202,138,4)] active:translate-y-1 active:shadow-none transition-all transform hover:-translate-y-0.5"
+                  className="inline-flex items-center gap-3 rounded-xl bg-emerald-600 px-7 py-4 font-semibold text-white transition hover:bg-emerald-700"
                 >
-                  Konfirmasi via WA
+                  <MessageCircle size={20} />
+                  Konfirmasi via WhatsApp
                 </Link>
               </div>
             </div>
-            
-            <p className="px-6 text-xs text-slate-400 italic text-center leading-relaxed">
-              Setiap donasi yang masuk akan langsung dikelola oleh bendahara Baitul Maal Al Muttaqin.
-            </p>
+
+            {/* KANAN */}
+            <div className="rounded-3xl border border-emerald-100 bg-white p-8 shadow-sm">
+              <div className="text-sm font-semibold uppercase tracking-wider text-emerald-600">
+                Donasi Online
+              </div>
+
+              <h2 className="mt-2 text-3xl font-bold text-slate-900">
+                Transfer ke rekening berikut
+              </h2>
+
+              <p className="mt-3 text-slate-600">
+                Pilih salah satu rekening lalu lakukan
+                konfirmasi setelah transfer.
+              </p>
+
+              {/* REKENING KECIL DI DALAM CARD */}
+              <div className="mt-8 space-y-4">
+                {bankAccounts.map((acc) => (
+                  <div
+                    key={acc.number}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-slate-200 bg-white">
+                        <Image
+                          src={acc.logo}
+                          alt={acc.bank}
+                          width={40}
+                          height={40}
+                          className="object-contain"
+                        />
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="text-xs text-slate-500">
+                          {acc.bank}
+                        </div>
+
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="text-lg font-bold text-slate-900">
+                            {formatAccount(acc.number)}
+                          </span>
+
+                          <button
+                            onClick={() =>
+                              handleCopy(acc.number)
+                            }
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-emerald-50"
+                          >
+                            {copied === acc.number ? (
+                              <Check
+                                size={15}
+                                className="text-emerald-600"
+                              />
+                            ) : (
+                              <Copy size={15} />
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="mt-1 text-xs text-slate-500">
+                          a.n. {acc.name}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         </div>
+      </section>
 
-        {/* Jaringan Media */}
-        <div className="mt-24 text-center">
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.5em] mb-6">Mitra Media Resmi</p>
-          <Link 
-            href="https://onislam.web.id" 
-            target="_blank" 
-            className="inline-flex items-center gap-3 px-10 py-3 rounded-xl border border-slate-200 bg-white hover:border-emerald-500 transition-all shadow-sm group active:scale-95"
-          >
-            <span className="text-slate-500 group-hover:text-emerald-600 font-black text-[11px] uppercase tracking-widest transition-colors italic">OnIslam.web.id</span>
-          </Link>
+      {/* CTA */}
+      <section className="pb-20 pt-12">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="rounded-3xl bg-emerald-600 p-10 text-white">
+            <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+
+              <div>
+                <h3 className="text-3xl font-bold">
+                  Sudah melakukan transfer?
+                </h3>
+
+                <p className="mt-3 text-emerald-50">
+                  Silakan lakukan konfirmasi melalui
+                  WhatsApp agar donasi Anda dapat segera
+                  kami catat dan verifikasi.
+                </p>
+              </div>
+
+              <div className="flex justify-start lg:justify-end">
+                <Link
+                  href={waLink}
+                  target="_blank"
+                  className="inline-flex items-center gap-3 rounded-xl bg-white px-8 py-4 font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                >
+                  <MessageCircle size={20} />
+                  Konfirmasi via WhatsApp
+                </Link>
+              </div>
+
+            </div>
+          </div>
+
+          <div className="mt-8 text-center text-sm text-slate-500">
+            Jazakumullahu khairan katsiran atas dukungan
+            dan kontribusi Anda untuk dakwah Islam.
+          </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

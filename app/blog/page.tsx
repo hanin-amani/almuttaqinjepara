@@ -72,6 +72,46 @@ export default function WartaJemaahPage() {
     return lastPart.replace(".html", "");
   };
 
+  // WARNA KATEGORI BLOGGER
+  const getCategoryColor = (label?: string) => {
+    const value = label?.toLowerCase() || "";
+
+    if (value.includes("kajian"))
+      return "bg-emerald-600";
+
+    if (value.includes("pengumuman"))
+      return "bg-red-600";
+
+    if (value.includes("prestasi"))
+      return "bg-blue-600";
+
+    if (value.includes("kegiatan"))
+      return "bg-orange-500";
+
+    if (value.includes("santri"))
+      return "bg-purple-600";
+
+    if (value.includes("berita"))
+      return "bg-sky-600";
+
+    if (value.includes("sirah"))
+      return "bg-amber-600";
+
+    if (value.includes("fiqih"))
+      return "bg-cyan-600";
+
+    if (value.includes("akhlak"))
+      return "bg-pink-600";
+
+    if (value.includes("hadits"))
+      return "bg-indigo-600";
+
+    if (value.includes("alquran"))
+      return "bg-green-700";
+
+    return "bg-slate-900";
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
@@ -117,12 +157,12 @@ export default function WartaJemaahPage() {
 
         {/* ERROR */}
         {error && (
-          <div className="mb-8 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+          <div className="mb-8 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
             {error}
           </div>
         )}
 
-        {/* EMPTY */}
+        {/* KOSONG */}
         {posts.length === 0 && !error ? (
           <div className="py-24 text-center">
             <BookOpen
@@ -135,13 +175,18 @@ export default function WartaJemaahPage() {
           </div>
         ) : (
 
-          /* GRID BERITA */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-7 gap-y-10">
 
             {posts.map((post) => {
               const coverImage = extractFirstImage(post.content);
               const slug =
                 extractSlugFromUrl(post.url) || post.id;
+
+              const category =
+                post.labels?.[0] || "Artikel";
+
+              const categoryColor =
+                getCategoryColor(category);
 
               return (
                 <article
@@ -151,7 +196,7 @@ export default function WartaJemaahPage() {
                   <Link href={`/blog/${slug}`}>
 
                     {/* THUMBNAIL */}
-                    <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-100 mb-4">
+                    <div className="relative aspect-video overflow-hidden rounded-2xl bg-slate-100 mb-4 shadow-sm">
 
                       {coverImage ? (
                         <img
@@ -171,16 +216,19 @@ export default function WartaJemaahPage() {
                         </div>
                       )}
 
-                      <div className="absolute top-3 left-3">
-                        <span className="bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded">
-                          Warta
+                      {/* LABEL BLOGGER DINAMIS */}
+                      <div className="absolute top-3 left-3 z-10">
+                        <span
+                          className={`px-3 py-1 rounded-full text-white text-[10px] font-black uppercase tracking-wider shadow-lg ${categoryColor}`}
+                        >
+                          {category}
                         </span>
                       </div>
                     </div>
 
                     {/* META */}
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-                      <Calendar size={12} />
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-3">
+                      <Calendar size={13} />
                       {new Date(post.published).toLocaleDateString(
                         "id-ID",
                         {
@@ -192,17 +240,17 @@ export default function WartaJemaahPage() {
                     </div>
 
                     {/* JUDUL */}
-                    <h2 className="text-xl font-bold text-slate-900 leading-snug line-clamp-2 group-hover:text-emerald-600 transition-colors">
+                    <h2 className="text-xl font-extrabold text-slate-900 leading-snug line-clamp-2 group-hover:text-emerald-600 transition-colors">
                       {post.title}
                     </h2>
 
                     {/* SNIPPET */}
-                    <p className="mt-3 text-sm text-slate-600 leading-relaxed line-clamp-2">
+                    <p className="mt-3 text-sm text-slate-600 leading-relaxed line-clamp-3">
                       {cleanSnippet(post.content)}
                     </p>
 
                     {/* LINK */}
-                    <div className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-emerald-600">
+                    <div className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-emerald-600">
                       Baca Selengkapnya
                       <ArrowRight
                         size={14}

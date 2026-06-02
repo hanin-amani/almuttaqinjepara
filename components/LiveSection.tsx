@@ -3,24 +3,23 @@
 import { useEffect, useRef } from "react";
 import { useAudio } from "@/context/AudioContext";
 
-// 🟢 MANTRA KEAMANAN NEXT.JS: Menjamin Turbopack meloloskan komponen anak tanpa optimasi kaku pas build
 export const dynamic = "force-dynamic";
 
 export default function LiveSection() {
-  // ✅ AMAN: Beri nilai fallback kosong {} agar jika context belum siap, serverless tidak memicu white screen
-  const { 
-    isPlaying = false, 
-    togglePlay = () => {}, 
-    analyserRef, 
-    metadata = { title: "Radio Suara Al Muttaqin", artist: "Virtual Auto DJ", art: "/bg-player.png" }, 
-    listeners = 0 
+  const {
+    isPlaying = false,
+    togglePlay = () => {},
+    analyserRef,
+    metadata = {
+      title: "Radio Suara Al Muttaqin",
+      artist: "Virtual Auto DJ",
+      art: "/bg-player.png",
+    },
+    listeners = 0,
   } = useAudio() || {};
-  
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // ===============================
-  // ULTRA LIGHTNING SPECTRUM (100% UTUH TANPA MERUBAH DESAIN)
-  // ===============================
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -29,13 +28,12 @@ export default function LiveSection() {
     if (!ctx) return;
 
     const resize = () => {
-      if (canvas) {
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-      }
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
     };
 
     resize();
+
     window.addEventListener("resize", resize);
 
     let animationId: number;
@@ -43,14 +41,21 @@ export default function LiveSection() {
 
     const draw = () => {
       animationId = requestAnimationFrame(draw);
-      if (canvas.height <= 0 || canvas.width <= 0) return;
+
+      if (!canvas.width || !canvas.height) return;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (!isPlaying || !analyserRef?.current) return;
 
       const analyser = analyserRef.current;
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
+
+      const bufferLength =
+        analyser.frequencyBinCount;
+
+      const dataArray =
+        new Uint8Array(bufferLength);
+
       analyser.getByteFrequencyData(dataArray);
 
       const width = canvas.width;
@@ -58,12 +63,18 @@ export default function LiveSection() {
       const centerY = height / 2;
 
       let bass = 0;
-      for (let i = 0; i < 10; i++) { bass += dataArray[i] || 0; }
-      bass = bass / 10;
 
-      if (bass > 180) flashAlpha = 0.5;
+      for (let i = 0; i < 10; i++) {
+        bass += dataArray[i] || 0;
+      }
+
+      bass /= 10;
+
+      if (bass > 180) {
+        flashAlpha = 0.5;
+      }
+
       if (flashAlpha > 0) {
-        ctx.shadowBlur = 0; // Matikan shadow pas flash biar FPS enteng
         ctx.fillStyle = `rgba(0,255,200,${flashAlpha})`;
         ctx.fillRect(0, 0, width, height);
         flashAlpha -= 0.03;
@@ -71,94 +82,164 @@ export default function LiveSection() {
 
       const barCount = 120;
       const spacing = width / barCount;
-      ctx.shadowBlur = 25;
+
+      ctx.shadowBlur = 20;
       ctx.shadowColor = "#00ffcc";
 
       for (let i = 0; i < barCount; i++) {
-        const dataIndex = Math.floor(i * (bufferLength / barCount)); 
-        const value = (dataArray[dataIndex] || 0) / 255;
-        const barHeight = value * centerY * 1.4;
+        const dataIndex = Math.floor(
+          i * (bufferLength / barCount)
+        );
+
+        const value =
+          (dataArray[dataIndex] || 0) / 255;
+
+        const barHeight =
+          value * centerY * 1.4;
+
         const x = i * spacing;
+
         const yTop = centerY - barHeight;
         const yBottom = centerY + barHeight;
 
-        if (Number.isFinite(yTop) && Number.isFinite(yBottom)) {
-          const gradient = ctx.createLinearGradient(0, yTop, 0, yBottom);
-          gradient.addColorStop(0, "#00ffcc");
-          gradient.addColorStop(0.3, "#10b981");
-          gradient.addColorStop(0.6, "#065f46");
-          gradient.addColorStop(1, "#001f1f");
-          ctx.strokeStyle = gradient;
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.moveTo(x, yTop);
-          ctx.lineTo(x, yBottom);
-          ctx.stroke();
-        }
+        const gradient =
+          ctx.createLinearGradient(
+            0,
+            yTop,
+            0,
+            yBottom
+          );
+
+        gradient.addColorStop(
+          0,
+          "#00ffcc"
+        );
+
+        gradient.addColorStop(
+          0.3,
+          "#10b981"
+        );
+
+        gradient.addColorStop(
+          0.6,
+          "#065f46"
+        );
+
+        gradient.addColorStop(
+          1,
+          "#001f1f"
+        );
+
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x, yTop);
+        ctx.lineTo(x, yBottom);
+        ctx.stroke();
       }
     };
 
     draw();
+
     return () => {
       cancelAnimationFrame(animationId);
-      window.removeEventListener("resize", resize);
+      window.removeEventListener(
+        "resize",
+        resize
+      );
     };
   }, [isPlaying, analyserRef]);
 
   return (
-    <section className="relative py-20 px-6 bg-black overflow-hidden flex items-center justify-center">
-      <div className="absolute inset-0 bg-gradient-to-b from-black via-emerald-950/80 to-black"></div>
+    <section className="relative overflow-hidden bg-black py-12 sm:py-16 lg:py-20 px-4 sm:px-6">
+      <div className="absolute inset-0 bg-gradient-to-b from-black via-emerald-950/80 to-black" />
 
-      <div className="relative z-20 max-w-6xl w-full flex flex-col items-center">
-        <h2 className="text-2xl font-black text-emerald-400 tracking-[0.5em] uppercase mb-10">
-          ⚡ ON AIR NOW ⚡
-        </h2>
+      <div className="relative z-20 mx-auto max-w-6xl">
 
-        <div className="w-full bg-white/5 backdrop-blur-xl border border-emerald-500/20 rounded-3xl p-8 shadow-2xl">
-          <div className="flex flex-col md:flex-row gap-8 items-center">
-            <div className="relative w-44 h-44">
-              <div className="absolute inset-0 bg-emerald-500/20 blur-3xl animate-pulse rounded-2xl"></div>
+        {/* TITLE */}
+        <div className="text-center mb-6 sm:mb-8 lg:mb-10">
+          <h2 className="text-sm sm:text-lg md:text-xl lg:text-2xl font-black text-emerald-400 uppercase tracking-[0.2em] sm:tracking-[0.35em]">
+            ⚡ ON AIR NOW ⚡
+          </h2>
+        </div>
+
+        {/* CARD */}
+        <div className="rounded-2xl lg:rounded-3xl border border-emerald-500/20 bg-white/5 backdrop-blur-xl p-4 sm:p-6 lg:p-8 shadow-2xl">
+
+          <div className="flex flex-col md:flex-row items-center gap-5 sm:gap-6 lg:gap-8">
+
+            {/* COVER */}
+            <div className="relative w-32 h-32 sm:w-40 sm:h-40 lg:w-44 lg:h-44 shrink-0">
+
+              <div className="absolute inset-0 rounded-2xl bg-emerald-500/20 blur-3xl animate-pulse" />
+
               <img
-                src={metadata?.art || "/bg-player.png"}
+                src={
+                  metadata?.art ||
+                  "/bg-player.png"
+                }
+                alt={metadata?.title}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/bg-player.png";
+                  (
+                    e.target as HTMLImageElement
+                  ).src = "/bg-player.png";
                 }}
-                className="relative z-10 w-full h-full object-cover rounded-2xl border border-white/20 shadow-lg"
-                alt={`Cover Art - ${metadata?.title || "Radio Al Muttaqin"}`}
+                className="relative z-10 w-full h-full object-cover rounded-2xl border border-white/20"
               />
             </div>
 
-            <div className="flex-1 w-full space-y-6">
-              <div className="h-28 bg-black rounded-xl overflow-hidden border border-emerald-500/20">
-                <canvas ref={canvasRef} className="w-full h-full" />
+            {/* CONTENT */}
+            <div className="flex-1 w-full">
+
+              {/* VISUALIZER */}
+              <div className="h-20 sm:h-24 lg:h-28 bg-black rounded-xl overflow-hidden border border-emerald-500/20">
+                <canvas
+                  ref={canvasRef}
+                  className="w-full h-full"
+                />
               </div>
 
-              <div className="text-left">
-                <h3 className="text-2xl font-black text-white uppercase tracking-tight italic leading-none">
-                  {metadata?.title || "Radio Suara Al Muttaqin"}
+              {/* INFO */}
+              <div className="mt-4 text-center md:text-left">
+
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-black text-white leading-tight">
+                  {metadata?.title ||
+                    "Radio Suara Al Muttaqin"}
                 </h3>
-                <p className="text-emerald-400 text-sm tracking-widest uppercase mt-2">
-                  {metadata?.artist || "Virtual Live Stream"}
+
+                <p className="mt-2 text-xs sm:text-sm text-emerald-400 uppercase tracking-wider">
+                  {metadata?.artist ||
+                    "Virtual Live Stream"}
                 </p>
               </div>
+
             </div>
           </div>
 
-          <div className="flex justify-between items-center mt-8">
-            <div className="text-emerald-400 text-sm font-bold tracking-widest">
+          {/* FOOTER */}
+          <div className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-3 sm:items-center sm:justify-between">
+
+            <div className="text-center sm:text-left text-emerald-400 text-sm font-bold">
               👥 {listeners} Pendengar
             </div>
 
             <button
               type="button"
-              onClick={togglePlay} // Mengontrol sakelar audio tunggal global
-              className={`px-12 py-4 rounded-xl font-black tracking-widest uppercase transition-all active:scale-95 shadow-xl cursor-pointer select-none ${
-                isPlaying ? "bg-red-600 hover:bg-red-500 text-white shadow-red-600/20" : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
+              onClick={togglePlay}
+              className={`w-full sm:w-auto px-6 sm:px-8 lg:px-12 py-3 lg:py-4 rounded-xl font-black uppercase tracking-wide transition-all active:scale-95 ${
+                isPlaying
+                  ? "bg-red-600 hover:bg-red-500 text-white"
+                  : "bg-emerald-600 hover:bg-emerald-500 text-white"
               }`}
             >
-              {isPlaying ? "Stop Radio" : "Putar Radio"}
+              {isPlaying
+                ? "Stop Radio"
+                : "Putar Radio"}
             </button>
+
           </div>
+
         </div>
       </div>
     </section>
