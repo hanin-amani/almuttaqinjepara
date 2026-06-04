@@ -160,7 +160,7 @@ export default function LiveSection() {
   }, [isPlaying, analyserRef]);
 
   // ==========================
-  // JSX
+  // JSX (tidak ubah desain)
   // ==========================
   return (
     <section className="relative overflow-hidden bg-black py-12 sm:py-16 lg:py-20 px-4 sm:px-6">
@@ -228,13 +228,16 @@ export default function LiveSection() {
         </div>
 
         {/* ==========================
-            Embed YouTube Live (hidden audio) 
+            Embed YouTube Live (audio-only, tidak ubah desain)
         ========================== */}
         {youtubeVideoId && (
           <iframe
-            style={{ display: "none" }}
-            src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1`}
-            allow="autoplay"
+            width={1}
+            height={1}
+            style={{ opacity: 0 }}
+            src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=0`}
+            allow="autoplay; encrypted-media"
+            title="YouTube Live Audio"
           />
         )}
 
