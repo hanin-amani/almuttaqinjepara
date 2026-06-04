@@ -69,7 +69,9 @@ export default function DetailWartaPage() {
   const [errorPost, setErrorPost] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!slug || typeof slug !== "string") {
+    const currentSlug = typeof slug === "string" ? slug : "";
+
+    if (!currentSlug) {
       setErrorPost("Slug URL artikel tidak valid.");
       setLoadingPost(false);
       return;
@@ -90,7 +92,7 @@ export default function DetailWartaPage() {
         const [detailRes, postsRes] = await Promise.all([
           fetch(
             `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/search?q=${encodeURIComponent(
-              slug
+              currentSlug
             )}&key=${apiKey}`
           ),
           fetch(
@@ -108,7 +110,7 @@ export default function DetailWartaPage() {
         const postsData = postsRes.ok ? await postsRes.json() : { items: [] };
 
         const matchedPost = detailData.items?.find((item: BloggerPost) => {
-          return extractSlugFromUrl(item.url) === slug;
+          return extractSlugFromUrl(item.url) === currentSlug;
         });
 
         if (!matchedPost) {
@@ -391,8 +393,7 @@ export default function DetailWartaPage() {
                         className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
                         loading="lazy"
                         onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src =
-                            "/bg-player.png";
+                          e.currentTarget.src = "/bg-player.png";
                         }}
                       />
                     </div>
@@ -463,8 +464,7 @@ export default function DetailWartaPage() {
                       alt={popularPosts[0].title}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src =
-                          "/bg-player.png";
+                        e.currentTarget.src = "/bg-player.png";
                       }}
                     />
                   </div>
@@ -536,8 +536,7 @@ export default function DetailWartaPage() {
                       alt={latestPosts[0].title}
                       className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
                       onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src =
-                          "/bg-player.png";
+                        e.currentTarget.src = "/bg-player.png";
                       }}
                     />
                   </div>
@@ -563,8 +562,7 @@ export default function DetailWartaPage() {
                         alt={news.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src =
-                            "/bg-player.png";
+                          e.currentTarget.src = "/bg-player.png";
                         }}
                       />
                     </div>
