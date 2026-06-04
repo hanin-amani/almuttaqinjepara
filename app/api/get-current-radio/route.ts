@@ -66,7 +66,7 @@ export async function GET() {
     // ⚡ LAPISAN A: LOGIKA PENYELA JINGLE (Memicu Otomatis Tiap Kelipatan 10 Menit)
     // =================================================================
     // Contoh: Jam 10:00, 10:10, 10:20, 10:30, 10:40, 10:50 pada 15 detik pertama
-    if (currentMinute % 10 === 0 && currentSecond < JINGLE_DURATION) {
+    if (currentMinute % 5 === 0 && currentMinute !== 0 && currentSecond < JINGLE_DURATION) {
       return NextResponse.json({
         active: true,
         title: "Jingle Suara Al Muttaqin",
