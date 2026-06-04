@@ -39,6 +39,8 @@ export default function LiveSection() {
         const videoId = data.items[0].id.videoId;
         setYoutubeVideoId(videoId);
         setIsYouTubeLive?.(true);
+        // Force stop MP3 saat live aktif
+        if (isPlaying) togglePlay();
       } else {
         setYoutubeVideoId(null);
         setIsYouTubeLive?.(false);
@@ -54,7 +56,7 @@ export default function LiveSection() {
     checkYouTubeLiveStatus(); // cek saat mount
     const interval = setInterval(checkYouTubeLiveStatus, 30000); // cek tiap 30 detik
     return () => clearInterval(interval);
-  }, []);
+  }, [isPlaying]);
 
   // ==========================
   // Persistent playback
@@ -67,15 +69,6 @@ export default function LiveSection() {
   useEffect(() => {
     localStorage.setItem("isPlaying", JSON.stringify(isPlaying));
   }, [isPlaying]);
-
-  // ==========================
-  // Override MP3 saat live
-  // ==========================
-  useEffect(() => {
-    if (youtubeVideoId && isPlaying) {
-      togglePlay(); // pause MP3 agar digantikan live
-    }
-  }, [youtubeVideoId]);
 
   // ==========================
   // Visualizer
@@ -228,16 +221,16 @@ export default function LiveSection() {
         </div>
 
         {/* ==========================
-            Embed YouTube Live (audio-only, tidak ubah desain)
+            Embed YouTube Live (audio-only, minimal visible agar autoplay jalan)
         ========================== */}
         {youtubeVideoId && (
           <iframe
-            width={1}
-            height={1}
-            style={{ opacity: 0 }}
+            width={300}
+            height={50}
             src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=0`}
             allow="autoplay; encrypted-media"
             title="YouTube Live Audio"
+            style={{ border: "none" }}
           />
         )}
 

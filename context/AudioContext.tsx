@@ -42,9 +42,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     art: "/bg-player.png",
   });
 
-  // ==========================
-  // YouTube Live Global State
-  // ==========================
   const [isYouTubeLive, setIsYouTubeLive] = useState(false);
 
   const fetchCurrentRadio = useCallback(async () => {
@@ -56,7 +53,15 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const applyRadioDataToAudio = useCallback(
     async (data: any, forceReload = false) => {
       if (!audioRef.current || !data?.active || !data.audio_url) return false;
-      if (isYouTubeLive) return false; // Jangan load MP3 saat YouTube Live aktif
+
+      if (isYouTubeLive) {
+        // Force stop MP3 saat live aktif
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current.load();
+        setIsPlaying(false);
+        return false;
+      }
 
       const audio = audioRef.current;
       const audioCtx = audioContextRef.current;
@@ -124,14 +129,26 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await fetchCurrentRadio();
       if (data && data.active && !isYouTubeLive) {
-        setMetadata({ title: data.title || "Siaran Sedang Aktif", artist: "Radio Suara Al Muttaqin", art: "/bg-player.png" });
+        setMetadata({
+          title: data.title || "Siaran Sedang Aktif",
+          artist: "Radio Suara Al Muttaqin",
+          art: "/bg-player.png",
+        });
         setListeners(1);
       } else {
-        setMetadata({ title: "Siaran Sedang Offline", artist: "Radio Suara Al Muttaqin", art: "/bg-player.png" });
+        setMetadata({
+          title: "Siaran Sedang Offline",
+          artist: "Radio Suara Al Muttaqin",
+          art: "/bg-player.png",
+        });
         setListeners(0);
       }
     } catch {
-      setMetadata({ title: "Siaran Sedang Offline", artist: "Radio Suara Al Muttaqin", art: "/bg-player.png" });
+      setMetadata({
+        title: "Siaran Sedang Offline",
+        artist: "Radio Suara Al Muttaqin",
+        art: "/bg-player.png",
+      });
       setListeners(0);
     }
   }, [fetchCurrentRadio, isYouTubeLive]);
