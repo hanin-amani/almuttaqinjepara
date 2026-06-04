@@ -50,7 +50,7 @@ export default function LiveSection() {
   async function checkYouTubeLiveStatus() {
     try {
       const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${YOUTUBE_CHANNEL_ID}&type=video&eventType=live&key=${API_KEY}`
+        `https://https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${YOUTUBE_CHANNEL_ID}&type=video&eventType=live&key=${API_KEY}`
       );
       const data = await res.json();
       if (data.items && data.items.length > 0) {
@@ -99,12 +99,18 @@ export default function LiveSection() {
 
     // KONDISI 2: Jika MP3 Audio sedang menyala -> STOP MP3
     if (isPlaying) {
-      togglePlay(); // Mematikan MP3 bawaan context
+      togglePlay(); // Memanggil killMp3Playback di Context
       return;
     }
 
     // KONDISI 3: Semua mati, dan ada Live YouTube -> UTAMAKAN YOUTUBE LIVE
     if (youtubeVideoId && window.YT && iframeContainerRef.current) {
+      
+      // 🔥 PENGHANCUR INSTAN: Matikan MP3 secara inline di sini agar tidak balapan dengan interval sync
+      if (isPlaying) {
+        togglePlay();
+      }
+
       if (!playerRef.current) {
         playerRef.current = new window.YT.Player(iframeContainerRef.current, {
           videoId: youtubeVideoId,
@@ -114,23 +120,35 @@ export default function LiveSection() {
             modestbranding: 1,
             rel: 0,
             playsinline: 1,
+            enablejsapi: 1,
           },
           events: {
             onReady: (event: any) => {
+              // 🔥 TRICK AUTOPLAY BROWSER: Paksa unMute dan naikkan volume setelah interaksi klik user
+              if (typeof event.target.unMute === "function") event.target.unMute();
+              if (typeof event.target.setVolume === "function") event.target.setVolume(100);
+              
               event.target.playVideo();
               setIsYouTubePlaying?.(true);
             },
             onStateChange: (event: any) => {
-              // Menyinkronkan jika user stop manual melalui interaksi eksternal (unlikely but safe)
-              if (event.data === 0 || event.data === 2) {
-                setIsYouTubePlaying?.(false);
-              } else if (event.data === 1) {
+              // Menyinkronkan status player (1 = playing, 2 = paused, 0 = ended)
+              if (event.data === 1) {
                 setIsYouTubePlaying?.(true);
+              } else if (event.data === 2 || event.data === 0) {
+                setIsYouTubePlaying?.(false);
               }
             },
+            onError: (err: any) => {
+              console.error("YouTube Player Error Code:", err.data);
+              setIsYouTubePlaying?.(false);
+            }
           },
         });
       } else {
+        if (typeof playerRef.current.unMute === "function") playerRef.current.unMute();
+        if (typeof playerRef.current.setVolume === "function") playerRef.current.setVolume(100);
+        
         playerRef.current.loadVideoById(youtubeVideoId);
         playerRef.current.playVideo();
         setIsYouTubePlaying?.(true);
@@ -152,7 +170,7 @@ export default function LiveSection() {
   }, []);
 
   // ==========================
-  // Visualizer (Sesuai kode awal Anda)
+  // Visualizer
   // ==========================
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -176,7 +194,6 @@ export default function LiveSection() {
       if (!canvas.width || !canvas.height) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Tetap berjalan jika salah satu aktif
       if ((!isPlaying && !isYouTubePlaying) || !analyserRef?.current) return;
 
       const analyser = analyserRef.current;
@@ -303,8 +320,19 @@ export default function LiveSection() {
           </div>
         </div>
 
-        {/* YouTube Player Container (Hidden) */}
-        <div ref={iframeContainerRef} style={{ width: 1, height: 1, opacity: 0, overflow: "hidden", position: "absolute", zIndex: -1 }} />
+        {/* 🔥 FIX CONTAINER: Diposisikan di luar layar jauh agar lolos dari deteksi elemen mati (hidden element) oleh browser */}
+        <div 
+          ref={iframeContainerRef} 
+          style={{ 
+            position: "absolute", 
+            width: "640px", 
+            height: "360px", 
+            top: "-9999px", 
+            left: "-9999px", 
+            opacity: 0, 
+            pointerEvents: "none" 
+          }} 
+        />
       </div>
     </section>
   );

@@ -47,6 +47,14 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [isYouTubeLive, setIsYouTubeLive] = useState(false);
   const [isYouTubePlaying, setIsYouTubePlaying] = useState(false);
 
+  // 🔥 TRICK UTAMA: Gunakan Mutable Ref untuk melacak status pemutaran YouTube secara instan
+  const isYouTubePlayingRef = useRef(false);
+
+  // Selalu sinkronkan ref setiap kali state berubah
+  useEffect(() => {
+    isYouTubePlayingRef.current = isYouTubePlaying;
+  }, [isYouTubePlaying]);
+
   // Fetch radio MP3
   const fetchCurrentRadio = useCallback(async () => {
     const res = await fetch("/api/get-current-radio", { cache: "no-store" });
@@ -70,8 +78,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     async (data: any, forceReload = false) => {
       if (!audioRef.current || !data?.active || !data.audio_url) return false;
 
-      // JIKA YOUTUBE SEDANG LIVE & PLAYING: Blokir total pemutaran MP3
-      if (isYouTubePlaying) {
+      // JIKA YOUTUBE SEDANG PLAYING: Blokir total pemutaran MP3 (Gunakan Ref agar presisi)
+      if (isYouTubePlayingRef.current) {
         killMp3Playback();
         return false;
       }
@@ -90,8 +98,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         lastSyncedUrlRef.current !== nextSrc ||
         timeDrift > 8;
 
-      // Update metadata MP3 hanya jika YouTube tidak sedang memegang kendali UI
-      if (!isYouTubePlaying) {
+      // Update metadata MP3 hanya jika YouTube tidak memegang kendali UI
+      if (!isYouTubePlayingRef.current) {
         setMetadata({
           title: data.title || "Siaran Sedang Aktif",
           artist: "Radio Suara Al Muttaqin",
@@ -139,12 +147,12 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         isAutoSwitchingRef.current = false;
       }
     },
-    [isYouTubePlaying, killMp3Playback]
+    [killMp3Playback]
   );
 
   // Fetch metadata berkala (Hanya jika YouTube tidak memutar media)
   const fetchMetadata = useCallback(async () => {
-    if (isYouTubePlaying) return; // Lindungi UI jika YouTube sedang ON AIR
+    if (isYouTubePlayingRef.current) return; // Lindungi UI jika YouTube sedang ON AIR
 
     try {
       const data = await fetchCurrentRadio();
@@ -171,7 +179,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       });
       setListeners(0);
     }
-  }, [fetchCurrentRadio, isYouTubePlaying]);
+  }, [fetchCurrentRadio]);
 
   useEffect(() => {
     fetchMetadata();
@@ -205,7 +213,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const startPlayback = useCallback(async () => {
-    if (isYouTubePlaying) return; // Jangan jalankan jika YouTube sedang on air
+    if (isYouTubePlayingRef.current) return; // Jangan jalankan jika YouTube sedang on air
     try {
       const data = await fetchCurrentRadio();
       if (data && data.active) await applyRadioDataToAudio(data, true);
@@ -215,7 +223,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       setHasError(true);
       setIsPlaying(false);
     }
-  }, [applyRadioDataToAudio, fetchCurrentRadio, isYouTubePlaying]);
+  }, [applyRadioDataToAudio, fetchCurrentRadio]);
 
   // Handle Klik Tombol (Play/Pause MP3)
   const togglePlay = async () => {
@@ -227,7 +235,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       isAutoSwitchingRef.current = false;
       killMp3Playback();
     } else {
-      // Jika pengguna menyalakan MP3 manual, paksa matikan status YouTube Playing jika sempat tersangkut
       userStoppedRef.current = false;
       setHasError(false);
       await startPlayback();
@@ -241,25 +248,31 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isYouTubePlaying, isPlaying, killMp3Playback]);
 
-  // Sync interval berkala (Hanya berjalan jika MP3 aktif dan YouTube MATI)
+  // Sync interval berkala (Menggunakan Ref untuk deteksi instan melompati State Batching)
   useEffect(() => {
-    if (!isPlaying || isYouTubePlaying) return;
+    if (!isPlaying) return;
 
     const interval = setInterval(async () => {
-      if (userStoppedRef.current || isYouTubePlaying) return;
+      // Jika user klik stop atau youtube dinyalakan, hancurkan interval saat ini juga
+      if (userStoppedRef.current || isYouTubePlayingRef.current) {
+        clearInterval(interval);
+        return;
+      }
       try {
         const data = await fetchCurrentRadio();
-        await applyRadioDataToAudio(data, false);
+        if (!isYouTubePlayingRef.current) {
+          await applyRadioDataToAudio(data, false);
+        }
       } catch (err) {
         console.error("Sync interval error:", err);
       }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, isYouTubePlaying, applyRadioDataToAudio, fetchCurrentRadio]);
+  }, [isPlaying, applyRadioDataToAudio, fetchCurrentRadio]);
 
   const handleAudioEnded = async () => {
-    if (userStoppedRef.current || isYouTubePlaying) return;
+    if (userStoppedRef.current || isYouTubePlayingRef.current) return;
     setIsPlaying(true);
     await startPlayback();
   };
