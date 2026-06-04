@@ -9,10 +9,7 @@ const YOUTUBE_CHANNEL_ID = process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID!;
 const API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY!;
 
 declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: any;
-  }
+  interface Window { YT: any; onYouTubeIframeAPIReady: any; }
 }
 
 export default function LiveSection() {
@@ -33,7 +30,9 @@ export default function LiveSection() {
   const iframeContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Load YouTube API
+  // ==========================
+  // Load YouTube IFrame API
+  // ==========================
   useEffect(() => {
     if (!window.YT) {
       const tag = document.createElement("script");
@@ -42,42 +41,47 @@ export default function LiveSection() {
     }
   }, []);
 
-  // Check live
-  useEffect(() => {
-    async function checkLive() {
-      try {
-        const res = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${YOUTUBE_CHANNEL_ID}&type=video&eventType=live&key=${API_KEY}`
-        );
-        const data = await res.json();
-        if (data.items && data.items.length > 0) {
-          const videoId = data.items[0].id.videoId;
-          setYoutubeVideoId(videoId);
-          setIsYouTubeLive(true);
-        } else {
-          setYoutubeVideoId(null);
-          setIsYouTubeLive(false);
-          setIsYouTubePlaying(false);
-        }
-      } catch (err) {
-        console.error(err);
+  // ==========================
+  // Check Live YouTube
+  // ==========================
+  const checkYouTubeLive = async () => {
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${YOUTUBE_CHANNEL_ID}&type=video&eventType=live&key=${API_KEY}`
+      );
+      const data = await res.json();
+      if (data.items?.length > 0) {
+        const videoId = data.items[0].id.videoId;
+        setYoutubeVideoId(videoId);
+        setIsYouTubeLive(true);
+      } else {
         setYoutubeVideoId(null);
         setIsYouTubeLive(false);
         setIsYouTubePlaying(false);
       }
+    } catch (err) {
+      console.error("YouTube API error", err);
+      setYoutubeVideoId(null);
+      setIsYouTubeLive(false);
+      setIsYouTubePlaying(false);
     }
+  };
 
-    checkLive();
-    const interval = setInterval(checkLive, 30000);
+  useEffect(() => {
+    checkYouTubeLive();
+    const interval = setInterval(checkYouTubeLive, 30000);
     return () => clearInterval(interval);
-  }, [setIsYouTubeLive, setIsYouTubePlaying]);
+  }, []);
 
-  const handlePlayClick = () => {
+  // ==========================
+  // Play click handler
+  // ==========================
+  const handlePlayClick = async () => {
+    // Stop MP3 jika ada
+    if (isPlaying) togglePlay();
+
+    // Mainkan YouTube jika ada live
     if (isYouTubeLive && youtubeVideoId && iframeContainerRef.current) {
-      // stop MP3
-      if (isPlaying) togglePlay(false);
-
-      // play YouTube
       if (!playerRef.current) {
         playerRef.current = new window.YT.Player(iframeContainerRef.current, {
           videoId: youtubeVideoId,
@@ -88,7 +92,7 @@ export default function LiveSection() {
               setIsYouTubePlaying(true);
             },
             onStateChange: (event: any) => {
-              if (event.data === 0 || event.data === 2) setIsYouTubePlaying(false);
+              if (event.data === 0 || event.data === 2) setIsYouTubePlaying(false); // ended/paused
             },
           },
         });
@@ -98,11 +102,14 @@ export default function LiveSection() {
         setIsYouTubePlaying(true);
       }
     } else {
-      togglePlay(true);
+      // Jika YouTube tidak live, jalankan MP3 biasa
+      togglePlay();
     }
   };
 
+  // ==========================
   // Visualizer
+  // ==========================
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -117,11 +124,8 @@ export default function LiveSection() {
     window.addEventListener("resize", resize);
 
     let animationId: number;
-    let flashAlpha = 0;
-
     const draw = () => {
       animationId = requestAnimationFrame(draw);
-      if (!canvas.width || !canvas.height) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if ((!isPlaying && !isYouTubePlaying) || !analyserRef?.current) return;
 
@@ -134,28 +138,11 @@ export default function LiveSection() {
       const height = canvas.height;
       const centerY = height / 2;
 
-      let bass = 0;
-      for (let i = 0; i < 10; i++) bass += dataArray[i] || 0;
-      bass /= 10;
-
-      if (bass > 180) flashAlpha = 0.5;
-      if (flashAlpha > 0) {
-        ctx.fillStyle = `rgba(0,255,200,${flashAlpha})`;
-        ctx.fillRect(0, 0, width, height);
-        flashAlpha -= 0.03;
-      }
-
-      const barCount = 120;
-      const spacing = width / barCount;
-
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = "#00ffcc";
-
-      for (let i = 0; i < barCount; i++) {
-        const dataIndex = Math.floor(i * (bufferLength / barCount));
+      for (let i = 0; i < 120; i++) {
+        const dataIndex = Math.floor(i * (bufferLength / 120));
         const value = (dataArray[dataIndex] || 0) / 255;
         const barHeight = value * centerY * 1.4;
-        const x = i * spacing;
+        const x = i * (width / 120);
         const yTop = centerY - barHeight;
         const yBottom = centerY + barHeight;
 
@@ -175,10 +162,7 @@ export default function LiveSection() {
     };
 
     draw();
-    return () => {
-      cancelAnimationFrame(animationId);
-      window.removeEventListener("resize", resize);
-    };
+    return () => { cancelAnimationFrame(animationId); window.removeEventListener("resize", resize); };
   }, [isPlaying, isYouTubePlaying, analyserRef]);
 
   return (
@@ -210,18 +194,15 @@ export default function LiveSection() {
 
             {/* CONTENT */}
             <div className="flex-1 w-full">
-              {/* VISUALIZER */}
               <div className="h-20 sm:h-24 lg:h-28 bg-black rounded-xl overflow-hidden border border-emerald-500/20">
                 <canvas ref={canvasRef} className="w-full h-full" />
               </div>
-
-              {/* INFO */}
               <div className="mt-4 text-center md:text-left">
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-black text-white leading-tight">
-                  {metadata?.title}
+                  {metadata?.title || "Radio Suara Al Muttaqin"}
                 </h3>
                 <p className="mt-2 text-xs sm:text-sm text-emerald-400 uppercase tracking-wider">
-                  {metadata?.artist}
+                  {metadata?.artist || "Virtual Live Stream"}
                 </p>
               </div>
             </div>
@@ -246,8 +227,9 @@ export default function LiveSection() {
           </div>
         </div>
 
-        {/* YouTube iframe hidden */}
+        {/* Hidden YouTube IFrame Player */}
         <div ref={iframeContainerRef} style={{ width: 1, height: 1, opacity: 0, overflow: "hidden" }} />
+
       </div>
     </section>
   );

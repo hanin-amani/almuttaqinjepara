@@ -14,7 +14,7 @@ interface AudioContextType {
   hasError: boolean;
   metadata: { title: string; artist: string; art: string };
   listeners: number;
-  togglePlay: (play?: boolean) => void;
+  togglePlay: () => void;
   analyserRef: React.MutableRefObject<AnalyserNode | null>;
   isYouTubeLive: boolean;
   setIsYouTubeLive: React.Dispatch<React.SetStateAction<boolean>>;
@@ -28,11 +28,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   const isInitialized = useRef(false);
   const lastSyncedUrlRef = useRef("");
   const userStoppedRef = useRef(false);
+  const isAutoSwitchingRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -46,30 +46,9 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [isYouTubeLive, setIsYouTubeLive] = useState(false);
   const [isYouTubePlaying, setIsYouTubePlaying] = useState(false);
 
-  const initAudio = useCallback(() => {
-    if (isInitialized.current || !audioRef.current) return;
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      const audioCtx = new AudioCtx();
-      audioContextRef.current = audioCtx;
-
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.8;
-      analyserRef.current = analyser;
-
-      const source = audioCtx.createMediaElementSource(audioRef.current);
-      source.connect(analyser);
-      analyser.connect(audioCtx.destination);
-      sourceRef.current = source;
-
-      isInitialized.current = true;
-      console.log("Audio Engine Virtual Radio Aktif");
-    } catch (err) {
-      console.error("Gagal inisialisasi Audio Engine:", err);
-    }
-  }, []);
-
+  // ==========================
+  // Fetch Radio MP3 Data
+  // ==========================
   const fetchCurrentRadio = useCallback(async () => {
     const res = await fetch("/api/get-current-radio", { cache: "no-store" });
     if (!res.ok) throw new Error("Radio API offline");
@@ -80,7 +59,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     async (data: any, forceReload = false) => {
       if (!audioRef.current || !data?.active || !data.audio_url) return false;
 
-      // Stop MP3 jika YouTube Live sedang dimainkan
+      // Stop MP3 saat YouTube live aktif
       if (isYouTubeLive && isYouTubePlaying) {
         audioRef.current.pause();
         audioRef.current.src = "";
@@ -94,18 +73,20 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       const nextSrc = new URL(data.audio_url, window.location.href).href;
       const currentSrc = audio.src;
 
-      const shouldReload = forceReload || currentSrc !== nextSrc || lastSyncedUrlRef.current !== nextSrc;
+      const shouldReload =
+        forceReload || currentSrc !== nextSrc || lastSyncedUrlRef.current !== nextSrc;
 
       setMetadata({
         title: data.title || "Siaran Sedang Aktif",
-        artist: "Radio Suara Al Muttaqin",
-        art: "/bg-player.png",
+        artist: data.program_title || "Radio Suara Al Muttaqin",
+        art: data.cover_art || "/bg-player.png",
       });
       setListeners(1);
 
       if (!shouldReload) return true;
 
       try {
+        isAutoSwitchingRef.current = true;
         audio.src = data.audio_url;
         audio.load();
 
@@ -122,54 +103,70 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         await audio.play();
 
         lastSyncedUrlRef.current = nextSrc;
+        userStoppedRef.current = false;
         setIsPlaying(true);
         setHasError(false);
         return true;
       } catch (err) {
-        console.error("Gagal memutar MP3:", err);
+        console.error("Gagal memutar audio:", err);
         setHasError(true);
         return false;
+      } finally {
+        isAutoSwitchingRef.current = false;
       }
     },
     [isYouTubeLive, isYouTubePlaying]
   );
+
+  const initAudio = useCallback(() => {
+    if (isInitialized.current || !audioRef.current) return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const audioCtx = new AudioCtx();
+      audioContextRef.current = audioCtx;
+
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
+      analyserRef.current = analyser;
+
+      const source = audioCtx.createMediaElementSource(audioRef.current);
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+
+      isInitialized.current = true;
+    } catch (err) {
+      console.error("Gagal inisialisasi AudioContext:", err);
+    }
+  }, []);
 
   const startPlayback = useCallback(async () => {
     if (isYouTubeLive && isYouTubePlaying) return;
     try {
       const data = await fetchCurrentRadio();
       if (data && data.active) await applyRadioDataToAudio(data, true);
-      else setIsPlaying(false);
     } catch (err) {
-      console.error("Gagal memulai playback:", err);
+      console.error(err);
       setHasError(true);
-      setIsPlaying(false);
     }
   }, [applyRadioDataToAudio, fetchCurrentRadio, isYouTubeLive, isYouTubePlaying]);
 
-  const togglePlay = async (play?: boolean) => {
+  const togglePlay = async () => {
     if (!audioRef.current) return;
     if (!isInitialized.current) initAudio();
 
-    if (play === false || (isPlaying && play === undefined)) {
+    if (isPlaying) {
+      userStoppedRef.current = true;
       audioRef.current.pause();
       audioRef.current.src = "";
       audioRef.current.load();
       setIsPlaying(false);
-      userStoppedRef.current = true;
     } else {
       userStoppedRef.current = false;
+      setHasError(false);
       await startPlayback();
     }
   };
-
-  useEffect(() => {
-    return () => {
-      if (audioContextRef.current) {
-        try { audioContextRef.current.close(); } catch {}
-      }
-    };
-  }, []);
 
   return (
     <AudioContext.Provider
@@ -186,7 +183,14 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         setIsYouTubePlaying,
       }}
     >
-      <audio ref={audioRef} crossOrigin="anonymous" preload="none" className="hidden" />
+      <audio
+        ref={audioRef}
+        crossOrigin="anonymous"
+        preload="none"
+        className="hidden"
+        onPause={() => { if (userStoppedRef.current) setIsPlaying(false); }}
+        onPlay={() => { userStoppedRef.current = false; setIsPlaying(true); setHasError(false); }}
+      />
       {children}
     </AudioContext.Provider>
   );
