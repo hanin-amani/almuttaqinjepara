@@ -18,6 +18,8 @@ interface AudioContextType {
   analyserRef: React.MutableRefObject<AnalyserNode | null>;
   isYouTubeLive: boolean;
   setIsYouTubeLive: React.Dispatch<React.SetStateAction<boolean>>;
+  isYouTubePlaying: boolean;
+  setIsYouTubePlaying: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const AudioContext = createContext<AudioContextType | null>(null);
@@ -43,6 +45,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [isYouTubeLive, setIsYouTubeLive] = useState(false);
+  const [isYouTubePlaying, setIsYouTubePlaying] = useState(false);
 
   const fetchCurrentRadio = useCallback(async () => {
     const res = await fetch("/api/get-current-radio", { cache: "no-store" });
@@ -54,8 +57,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     async (data: any, forceReload = false) => {
       if (!audioRef.current || !data?.active || !data.audio_url) return false;
 
-      if (isYouTubeLive) {
-        // Force stop MP3 saat live aktif
+      // Stop MP3 jika YouTube Live sedang dimainkan
+      if (isYouTubeLive && isYouTubePlaying) {
         audioRef.current.pause();
         audioRef.current.src = "";
         audioRef.current.load();
@@ -122,7 +125,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         isAutoSwitchingRef.current = false;
       }
     },
-    [isYouTubeLive]
+    [isYouTubeLive, isYouTubePlaying]
   );
 
   const fetchMetadata = useCallback(async () => {
@@ -184,7 +187,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const startPlayback = useCallback(async () => {
-    if (isYouTubeLive) return; // jangan start MP3 saat live
+    if (isYouTubeLive && isYouTubePlaying) return;
     try {
       const data = await fetchCurrentRadio();
       if (data && data.active) await applyRadioDataToAudio(data, true);
@@ -194,7 +197,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       setHasError(true);
       setIsPlaying(false);
     }
-  }, [applyRadioDataToAudio, fetchCurrentRadio, isYouTubeLive]);
+  }, [applyRadioDataToAudio, fetchCurrentRadio, isYouTubeLive, isYouTubePlaying]);
 
   const togglePlay = async () => {
     if (!audioRef.current) return;
@@ -230,7 +233,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   }, [applyRadioDataToAudio, fetchCurrentRadio, isPlaying, isYouTubeLive]);
 
   const handleAudioEnded = async () => {
-    if (userStoppedRef.current || isYouTubeLive) return;
+    if (userStoppedRef.current || (isYouTubeLive && isYouTubePlaying)) return;
     setIsPlaying(true);
     await startPlayback();
   };
@@ -254,6 +257,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         analyserRef,
         isYouTubeLive,
         setIsYouTubeLive,
+        isYouTubePlaying,
+        setIsYouTubePlaying,
       }}
     >
       <audio

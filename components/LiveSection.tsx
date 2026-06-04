@@ -26,7 +26,8 @@ export default function LiveSection() {
   } = useAudio() || {};
 
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
-  const [ytPlaying, setYtPlaying] = useState(false); // <-- state lokal untuk YouTube
+  const [ytPlaying, setYtPlaying] = useState(false);
+  const [youtubeThumbnail, setYoutubeThumbnail] = useState<string | null>(null);
   const playerRef = useRef<any>(null);
   const iframeContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -43,7 +44,7 @@ export default function LiveSection() {
   }, []);
 
   // ==========================
-  // Check YouTube Live
+  // Check YouTube Live Status
   // ==========================
   async function checkYouTubeLiveStatus() {
     try {
@@ -55,16 +56,19 @@ export default function LiveSection() {
         const videoId = data.items[0].id.videoId;
         setYoutubeVideoId(videoId);
         setIsYouTubeLive?.(true);
+        setYoutubeThumbnail(data.items[0].snippet.thumbnails.high.url);
       } else {
         setYoutubeVideoId(null);
         setIsYouTubeLive?.(false);
         setYtPlaying(false);
+        setYoutubeThumbnail(null);
       }
     } catch (err) {
       console.error("YouTube API error", err);
       setYoutubeVideoId(null);
       setIsYouTubeLive?.(false);
       setYtPlaying(false);
+      setYoutubeThumbnail(null);
     }
   }
 
@@ -94,10 +98,11 @@ export default function LiveSection() {
           events: {
             onReady: (event: any) => {
               event.target.playVideo();
-              setYtPlaying(true); // update tombol
+              setYtPlaying(true);
             },
             onStateChange: (event: any) => {
-              if (event.data === 0 || event.data === 2) setYtPlaying(false); // end/pause
+              // 0 = ended, 2 = paused
+              if (event.data === 0 || event.data === 2) setYtPlaying(false);
             },
           },
         });
@@ -211,7 +216,7 @@ export default function LiveSection() {
             <div className="relative w-32 h-32 sm:w-40 sm:h-40 lg:w-44 lg:h-44 shrink-0">
               <div className="absolute inset-0 rounded-2xl bg-emerald-500/20 blur-3xl animate-pulse" />
               <img
-                src={metadata?.art || "/bg-player.png"}
+                src={ytPlaying && youtubeThumbnail ? youtubeThumbnail : metadata?.art || "/bg-player.png"}
                 alt={metadata?.title}
                 onError={(e) => { (e.target as HTMLImageElement).src = "/bg-player.png"; }}
                 className="relative z-10 w-full h-full object-cover rounded-2xl border border-white/20"
@@ -256,7 +261,7 @@ export default function LiveSection() {
           </div>
         </div>
 
-        {/* YouTube Live Player (audio-only, hidden) */}
+        {/* YouTube Live Player (hidden) */}
         <div ref={iframeContainerRef} style={{ width: 1, height: 1, opacity: 0, overflow: "hidden" }} />
 
       </div>
