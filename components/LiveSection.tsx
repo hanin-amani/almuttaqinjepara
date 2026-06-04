@@ -5,7 +5,6 @@ import { useAudio } from "@/context/AudioContext";
 
 export const dynamic = "force-dynamic";
 
-// Gunakan environment variable
 const YOUTUBE_CHANNEL_ID = process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID!;
 const API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY!;
 
@@ -55,7 +54,6 @@ export default function LiveSection() {
         const videoId = data.items[0].id.videoId;
         setYoutubeVideoId(videoId);
         setIsYouTubeLive?.(true);
-        if (isPlaying) togglePlay(); // pause MP3
       } else {
         setYoutubeVideoId(null);
         setIsYouTubeLive?.(false);
@@ -71,37 +69,37 @@ export default function LiveSection() {
     checkYouTubeLiveStatus();
     const interval = setInterval(checkYouTubeLiveStatus, 30000);
     return () => clearInterval(interval);
-  }, [isPlaying]);
+  }, []);
 
   // ==========================
-  // Init YouTube Player when videoId changes
+  // Play YouTube Live on user click
   // ==========================
-  useEffect(() => {
-    if (!youtubeVideoId || !window.YT || !iframeContainerRef.current) return;
+  const handlePlayClick = async () => {
+    togglePlay(); // hentikan MP3 / start radio
 
-    if (playerRef.current) {
-      playerRef.current.loadVideoById(youtubeVideoId);
-      return;
-    }
-
-    window.onYouTubeIframeAPIReady = () => {
-      playerRef.current = new window.YT.Player(iframeContainerRef.current, {
-        videoId: youtubeVideoId,
-        playerVars: {
-          autoplay: 1,
-          controls: 0,
-          modestbranding: 1,
-          rel: 0,
-          mute: 0,
-        },
-        events: {
-          onReady: (event: any) => {
-            event.target.playVideo();
+    if (youtubeVideoId && window.YT && iframeContainerRef.current) {
+      if (!playerRef.current) {
+        playerRef.current = new window.YT.Player(iframeContainerRef.current, {
+          videoId: youtubeVideoId,
+          playerVars: {
+            autoplay: 1,
+            controls: 0,
+            modestbranding: 1,
+            rel: 0,
+            playsinline: 1,
           },
-        },
-      });
-    };
-  }, [youtubeVideoId]);
+          events: {
+            onReady: (event: any) => {
+              event.target.playVideo();
+            },
+          },
+        });
+      } else {
+        playerRef.current.loadVideoById(youtubeVideoId);
+        playerRef.current.playVideo();
+      }
+    }
+  };
 
   // ==========================
   // Visualizer
@@ -238,7 +236,7 @@ export default function LiveSection() {
             </div>
             <button
               type="button"
-              onClick={togglePlay}
+              onClick={handlePlayClick}
               className={`w-full sm:w-auto px-6 sm:px-8 lg:px-12 py-3 lg:py-4 rounded-xl font-black uppercase tracking-wide transition-all active:scale-95 ${
                 isPlaying
                   ? "bg-red-600 hover:bg-red-500 text-white"
@@ -250,10 +248,8 @@ export default function LiveSection() {
           </div>
         </div>
 
-        {/* ==========================
-            YouTube Live Player (audio-only, minimal visible)
-        ========================== */}
-        <div ref={iframeContainerRef} style={{ width: 0, height: 0, overflow: "hidden" }} />
+        {/* YouTube Live Player (audio-only, minimal visible) */}
+        <div ref={iframeContainerRef} style={{ width: 1, height: 1, opacity: 0, overflow: "hidden" }} />
 
       </div>
     </section>
