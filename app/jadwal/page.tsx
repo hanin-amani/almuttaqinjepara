@@ -8,7 +8,8 @@ export default function JadwalPage() {
   // ✅ DATA AMAN: Data internal Virtual Auto DJ yang dikunci secara mandiri
   const programHarian = [
     { jam: "06:00 - 07:00", acara: "Nasyid Pagi", deskripsi: "Alunan nasyid penuh semangat untuk mengawali aktivitas pagi hari." },
-    { jam: "07:00 - 09:00", acara: "Taujih Pagi Ust. Sartono", deskripsi: "Kajian hikmah dan motivasi islami untuk bekal harian." },
+    { jam: "07:00 - 09:00", acara: "Pengajian Umum", deskripsi: "Pengajian umum yang diselenggarakan Oleh Pesantren Al Muttaqin" },
+	{ jam: "09:00 - 10:00", acara: "Kajian Aqidah", deskripsi: "Pengajian Tema Aqidah" },
     { jam: "10:00 - 11:00", acara: "Kajian Keluarga Sakinah", deskripsi: "Membangun rumah tangga islami yang penuh ketenangan dan cinta." },
     { jam: "13:00 - 14:00", acara: "Kajian Tematik", deskripsi: "Pembahasan mendalam seputar fikih dan akidah kehidupan sehari-hari." },
     { jam: "16:00 - 17:00", acara: "Taujih Sore Ust. Sartono", deskripsi: "Siraman rohani untuk menyegarkan iman di waktu sore." },

@@ -28,7 +28,8 @@ export default function RadioInteractionHub() {
   // Data jadwal internal diselaraskan dengan Purwokerto / Banyumas Hub
   const scheduleData = [
     { time: "06:00", title: "Nasyid Pagi", icon: "☀️" },
-    { time: "07:00", title: "Taujih Pagi Ust. Sartono", icon: "📖" },
+    { time: "07:00", title: "Pengajian Umum", icon: "📖" },
+	{ time: "09:00", title: "Kajian Aqidah", icon: "📖" },
     { time: "10:00", title: "Kajian Keluarga Sakinah", icon: "🏠" },
     { time: "13:00", title: "Kajian Tematik", icon: "💡" },
     { time: "16:00", title: "Taujih Sore Ust. Sartono", icon: "🌇" },

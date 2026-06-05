@@ -14,12 +14,22 @@ const FILLER_PLAYLIST = [
   {
     title: "Murottal Jeda - Surah Al-Mulk",
     url: "https://sdit.my.id/radio/SurahAlMulk-Saad-Al-Ghamdi.mp3",
-    duration: 1800,
+    duration: 366,
   },
   {
     title: "Nasyid Jeda - Rikhie Asbo",
     url: "https://sdit.my.id/radio/Rikhie-Asbo.mp3",
-    duration: 3600,
+    duration: 5760,
+  },
+  {
+    title: "Murottal Jeda - Surah Al-Waqiah",
+    url: "https://sdit.my.id/radio/al-waqiah-ust-shidqy.mp3",
+    duration: 7254,
+  },
+  {
+    title: "Nasyid Jeda - Hanya Rindu Versi Arab",
+    url: "https://sdit.my.id/radio/hanya-rindu-versi-arab.mp3",
+    duration: 7254,
   },
 ];
 
