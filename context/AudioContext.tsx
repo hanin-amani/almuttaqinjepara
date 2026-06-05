@@ -42,6 +42,12 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const isAutoSwitchingRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
+  const isPlayingRef = useRef(false);
+
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
   const [hasError, setHasError] = useState(false);
   const [listeners, setListeners] = useState(0);
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
@@ -58,9 +64,30 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     ? `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`
     : "/bg-player.png";
 
-  const stopMp3Playback = useCallback(() => {
+  // --- Jingle setup ---
+  const jingleRef = useRef<HTMLAudioElement | null>(null);
+  const jingleIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isJinglePlayingRef = useRef(false);
+
+  const JINGLE_INTERVAL = 5 * 60 * 1000; // 5 menit
+  const JINGLE_FILE = "https://sdit.my.id/radio/jingle.mp3"; // sesuaikan dengan nama file sebenarnya
+
+  // --- Reset MP3 ---
+  const resetMp3Playback = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    // Hentikan jingle jika ada
+    if (jingleRef.current) {
+      jingleRef.current.pause();
+      jingleRef.current.currentTime = 0;
+    }
+    isJinglePlayingRef.current = false;
+
+    if (jingleIntervalRef.current) {
+      clearInterval(jingleIntervalRef.current);
+      jingleIntervalRef.current = null;
+    }
 
     userStoppedRef.current = true;
     isAutoSwitchingRef.current = false;
@@ -83,13 +110,47 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     youtubeToggleRef.current = handler;
   }, []);
 
-  const toggleLivePlayback = useCallback(() => {
-    if (isYouTubeLive && youtubeToggleRef.current) {
-      youtubeToggleRef.current();
-      return;
-    }
+  const playJingle = useCallback(async () => {
+    try {
+      if (
+        !audioRef.current ||
+        !isPlayingRef.current ||
+        isYouTubeLive ||
+        isJinglePlayingRef.current
+      ) {
+        return;
+      }
 
-    togglePlay();
+      isJinglePlayingRef.current = true;
+
+      if (!jingleRef.current) {
+        jingleRef.current = new Audio(JINGLE_FILE);
+        jingleRef.current.preload = "auto";
+        jingleRef.current.crossOrigin = "anonymous";
+        jingleRef.current.onerror = () => {
+          console.error("Jingle gagal dimuat");
+          if (audioRef.current) audioRef.current.volume = 1;
+          isJinglePlayingRef.current = false;
+        };
+      }
+
+      const mainAudio = audioRef.current;
+      const originalVolume = mainAudio.volume;
+
+      mainAudio.volume = 0.25; // ducking
+      jingleRef.current.currentTime = 0;
+
+      await jingleRef.current.play();
+
+      jingleRef.current.onended = () => {
+        mainAudio.volume = originalVolume;
+        isJinglePlayingRef.current = false;
+      };
+    } catch (err) {
+      console.error("Gagal memutar jingle:", err);
+      if (audioRef.current) audioRef.current.volume = 1;
+      isJinglePlayingRef.current = false;
+    }
   }, [isYouTubeLive]);
 
   const applyRadioDataToAudio = useCallback(
@@ -97,7 +158,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       if (!audioRef.current || !data?.active || !data.audio_url) return false;
 
       if (data.type === "youtube_live" || isYouTubeLive) {
-        stopMp3Playback();
+        resetMp3Playback();
         setIsYouTubeLive(true);
         setMetadata({
           title: data.title || "YouTube Live Streaming",
@@ -133,7 +194,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
       try {
         isAutoSwitchingRef.current = true;
-
         audio.src = data.audio_url;
         audio.load();
 
@@ -142,7 +202,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
             audio.removeEventListener("loadedmetadata", onLoadedMetadata);
             resolve();
           };
-
           audio.addEventListener("loadedmetadata", onLoadedMetadata);
           setTimeout(resolve, 1200);
         });
@@ -174,7 +233,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         isAutoSwitchingRef.current = false;
       }
     },
-    [isYouTubeLive, stopMp3Playback, youtubeThumbnail]
+    [isYouTubeLive, resetMp3Playback, youtubeThumbnail]
   );
 
   const fetchMetadata = useCallback(async () => {
@@ -182,7 +241,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       const data = await fetchCurrentRadio();
 
       if (data?.active && data.type === "youtube_live") {
-        stopMp3Playback();
+        resetMp3Playback();
         setIsYouTubeLive(true);
         setMetadata({
           title: data.title || "YouTube Live Streaming",
@@ -220,7 +279,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       });
       setListeners(0);
     }
-  }, [fetchCurrentRadio, stopMp3Playback, youtubeThumbnail]);
+  }, [fetchCurrentRadio, resetMp3Playback, youtubeThumbnail]);
 
   useEffect(() => {
     fetchMetadata();
@@ -258,7 +317,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       const data = await fetchCurrentRadio();
 
       if (data?.type === "youtube_live") {
-        stopMp3Playback();
+        resetMp3Playback();
         setIsYouTubeLive(true);
         setMetadata({
           title: data.title || "YouTube Live Streaming",
@@ -278,9 +337,9 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       setHasError(true);
       setIsPlaying(false);
     }
-  }, [applyRadioDataToAudio, fetchCurrentRadio, stopMp3Playback, youtubeThumbnail]);
+  }, [applyRadioDataToAudio, fetchCurrentRadio, resetMp3Playback, youtubeThumbnail]);
 
-  async function togglePlay() {
+  const togglePlay = useCallback(async () => {
     if (!audioRef.current) return;
 
     if (!isInitialized.current) {
@@ -288,23 +347,56 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (isPlaying) {
-      stopMp3Playback();
+      resetMp3Playback();
       return;
     }
 
     userStoppedRef.current = false;
     setHasError(false);
+
     await startPlayback();
-  }
+  }, [initAudio, isPlaying, resetMp3Playback, startPlayback]);
+
+  const toggleLivePlayback = useCallback(() => {
+    if (isYouTubeLive && youtubeToggleRef.current) {
+      youtubeToggleRef.current();
+      return;
+    }
+
+    togglePlay();
+  }, [isYouTubeLive, togglePlay]);
 
   useEffect(() => {
     if (isYouTubeLive) {
-      stopMp3Playback();
+      resetMp3Playback();
     }
-  }, [isYouTubeLive, stopMp3Playback]);
+  }, [isYouTubeLive, resetMp3Playback]);
+
+  // --- Scheduler Jingle ---
+  useEffect(() => {
+    if (jingleIntervalRef.current) {
+      clearInterval(jingleIntervalRef.current);
+      jingleIntervalRef.current = null;
+    }
+
+    if (isPlaying && !isYouTubeLive) {
+      jingleIntervalRef.current = setInterval(() => {
+        playJingle();
+      }, JINGLE_INTERVAL);
+    }
+
+    return () => {
+      if (jingleIntervalRef.current) {
+        clearInterval(jingleIntervalRef.current);
+        jingleIntervalRef.current = null;
+      }
+    };
+  }, [isPlaying, isYouTubeLive, playJingle]);
 
   useEffect(() => {
     return () => {
+      if (jingleIntervalRef.current) clearInterval(jingleIntervalRef.current);
+      if (jingleRef.current) jingleRef.current.pause();
       if (audioContextRef.current) {
         try {
           audioContextRef.current.close();
@@ -349,7 +441,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         }}
         className="hidden"
       />
-
       {children}
     </AudioContext.Provider>
   );

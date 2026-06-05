@@ -16,10 +16,7 @@ export default function DonasiSection({
 }: DonasiSectionProps) {
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(
-        text.replace(/\s/g, "")
-      );
-
+      await navigator.clipboard.writeText(text.replace(/\s/g, ""));
       alert("Nomor rekening berhasil disalin");
     } catch {
       alert("Gagal menyalin nomor rekening");
@@ -35,18 +32,10 @@ export default function DonasiSection({
       className="bg-gradient-to-b from-white via-white to-emerald-50 py-12 md:py-20"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-
-        <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 lg:items-center">
-
-          {/* KIRI */}
+        <div className="grid gap-8 lg:grid-cols-[1fr_0.68fr] lg:gap-12 lg:items-center">
           <div>
-
             <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-2">
-              <Heart
-                size={14}
-                className="fill-emerald-600 text-emerald-600"
-              />
-
+              <Heart size={14} className="fill-emerald-600 text-emerald-600" />
               <span className="text-xs sm:text-sm font-medium text-emerald-700">
                 Infaq & Sedekah Jariyah
               </span>
@@ -60,11 +49,9 @@ export default function DonasiSection({
             </h2>
 
             <p className="mt-5 text-base md:text-lg leading-relaxed text-slate-600 max-w-xl">
-              Donasi yang Anda salurkan akan digunakan
-              untuk mendukung operasional Radio Suara
-              Al Muttaqin, kegiatan dakwah, pendidikan,
-              serta pengembangan Pondok Pesantren
-              Al Muttaqin.
+              Donasi yang Anda salurkan akan digunakan untuk mendukung
+              operasional Radio Suara Al Muttaqin, kegiatan dakwah, pendidikan,
+              serta pengembangan Pondok Pesantren Al Muttaqin.
             </p>
 
             <a
@@ -76,130 +63,96 @@ export default function DonasiSection({
               <MessageCircle size={18} />
               Konfirmasi via WhatsApp
             </a>
-
           </div>
 
-          {/* KANAN */}
-          <div className="space-y-4">
-
-            {/* BSI */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:shadow-md transition">
-
-              <div className="flex flex-col gap-4">
-
-                <div className="flex items-center gap-4">
-
-                  <div className="flex h-16 w-24 sm:h-20 sm:w-28 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white p-3">
-                    <Image
-                      src="/bsi.png"
-                      alt="BSI"
-                      width={100}
-                      height={40}
-                      className="max-h-10 w-auto object-contain"
-                    />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-
-                    <p className="text-xs sm:text-sm text-slate-500">
-                      Bank Syariah Indonesia
-                    </p>
-
-                    <p className="mt-1 break-all text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">
-                      {bsi}
-                    </p>
-
-                    <p className="mt-1 text-xs sm:text-sm text-slate-500">
-                      a.n. {an}
-                    </p>
-
-                  </div>
-
+          <div className="w-full max-w-sm space-y-2.5 lg:ml-auto">
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow-md">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-2">
+                  <Image
+                    src="/bsi.png"
+                    alt="BSI"
+                    width={72}
+                    height={30}
+                    className="max-h-7 w-auto object-contain"
+                  />
                 </div>
 
-                <button
-                  onClick={() =>
-                    copyToClipboard(bsi)
-                  }
-                  className="w-full h-11 rounded-xl border border-slate-200 flex items-center justify-center gap-2 text-sm font-medium hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition"
-                >
-                  <Copy size={16} />
-                  Salin Nomor Rekening
-                </button>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] text-slate-500">
+                    Bank Syariah Indonesia
+                  </p>
 
+                  <p className="mt-0.5 break-all text-lg sm:text-xl font-black leading-tight tracking-tight text-slate-900">
+                    {bsi}
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    a.n. {an}
+                  </p>
+                </div>
               </div>
 
+              <button
+                type="button"
+                onClick={() => copyToClipboard(bsi)}
+                className="mt-2.5 flex h-8 w-full items-center justify-center gap-1.5 rounded-md border border-slate-200 text-[11px] font-medium text-slate-900 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+              >
+                <Copy size={13} />
+                Salin Nomor Rekening
+              </button>
             </div>
 
-            {/* BRI */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:shadow-md transition">
-
-              <div className="flex flex-col gap-4">
-
-                <div className="flex items-center gap-4">
-
-                  <div className="flex h-16 w-24 sm:h-20 sm:w-28 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white p-3">
-                    <Image
-                      src="/bri.png"
-                      alt="BRI"
-                      width={100}
-                      height={40}
-                      className="max-h-10 w-auto object-contain"
-                    />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-
-                    <p className="text-xs sm:text-sm text-slate-500">
-                      Bank Rakyat Indonesia
-                    </p>
-
-                    <p className="mt-1 break-all text-lg sm:text-2xl lg:text-3xl font-bold text-slate-900">
-                      {bri}
-                    </p>
-
-                    <p className="mt-1 text-xs sm:text-sm text-slate-500">
-                      a.n. {an}
-                    </p>
-
-                  </div>
-
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow-md">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-2">
+                  <Image
+                    src="/bri.png"
+                    alt="BRI"
+                    width={72}
+                    height={30}
+                    className="max-h-7 w-auto object-contain"
+                  />
                 </div>
 
-                <button
-                  onClick={() =>
-                    copyToClipboard(bri)
-                  }
-                  className="w-full h-11 rounded-xl border border-slate-200 flex items-center justify-center gap-2 text-sm font-medium hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition"
-                >
-                  <Copy size={16} />
-                  Salin Nomor Rekening
-                </button>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] text-slate-500">
+                    Bank Rakyat Indonesia
+                  </p>
 
+                  <p className="mt-0.5 break-all text-base sm:text-lg md:text-xl font-black leading-tight tracking-tight text-slate-900">
+                    {bri}
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    a.n. {an}
+                  </p>
+                </div>
               </div>
 
+              <button
+                type="button"
+                onClick={() => copyToClipboard(bri)}
+                className="mt-2.5 flex h-8 w-full items-center justify-center gap-1.5 rounded-md border border-slate-200 text-[11px] font-medium text-slate-900 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+              >
+                <Copy size={13} />
+                Salin Nomor Rekening
+              </button>
             </div>
 
-            {/* INFO */}
-            <div className="rounded-2xl bg-emerald-600 p-5 sm:p-6 text-white">
-
-              <h3 className="text-lg sm:text-xl font-bold">
+            <div className="rounded-xl bg-emerald-600 p-3.5 text-white shadow-sm">
+              <h3 className="text-sm sm:text-base font-bold">
                 Jazakumullahu Khairan Katsiran
               </h3>
 
-              <p className="mt-2 text-sm sm:text-base leading-relaxed text-emerald-50">
-                Semoga Allah membalas setiap rupiah yang
-                Anda infakkan dengan keberkahan dunia dan
-                akhirat serta menjadi amal jariyah yang
+              <p className="mt-1.5 text-[11px] sm:text-xs leading-relaxed text-emerald-50">
+                Semoga Allah membalas setiap rupiah yang Anda infakkan dengan
+                keberkahan dunia dan akhirat serta menjadi amal jariyah yang
                 terus mengalir pahalanya.
               </p>
-
             </div>
-
           </div>
-
         </div>
-
       </div>
     </section>
   );

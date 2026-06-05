@@ -38,7 +38,6 @@ export default function LiveSection() {
     registerYouTubeToggle,
     analyserRef,
     metadata,
-    listeners,
     isYouTubeLive,
     setIsYouTubeLive,
     isYouTubePlaying,
@@ -48,13 +47,38 @@ export default function LiveSection() {
     youtubeThumbnail,
   } = useAudio();
 
+  // state untuk YouTube API
   const [isYouTubeApiReady, setIsYouTubeApiReady] = useState(false);
 
+  // STATE PENDENGAR PALSU (dynamic)
+  const [displayListeners, setDisplayListeners] = useState(() => {
+    const today = new Date();
+    const seed =
+      today.getFullYear() * 10000 +
+      (today.getMonth() + 1) * 100 +
+      today.getDate();
+    return 300 + (seed % 400); // angka default tiap hari 300–699
+  });
+
+  // buat angka terlihat hidup (naik-turun sedikit tiap 45 detik)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDisplayListeners((prev) => {
+        const delta = Math.floor(Math.random() * 3) - 1; // -1,0,+1
+        return Math.max(250, prev + delta);
+      });
+    }, 45000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // REF Player
   const playerRef = useRef<any>(null);
   const iframeContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const syntheticBarsRef = useRef<number[]>([]);
   const syntheticVelocityRef = useRef<number[]>([]);
+  
   const isPlayingRef = useRef(isPlaying);
   const youtubeVideoIdRef = useRef(youtubeVideoId);
   const isYouTubePlayingRef = useRef(isYouTubePlaying);
@@ -75,6 +99,14 @@ export default function LiveSection() {
   useEffect(() => {
     isYouTubeApiReadyRef.current = isYouTubeApiReady;
   }, [isYouTubeApiReady]);
+
+  // HANDLE TOMBOL PLAY
+  const handleTogglePlay = () => {
+    if (!isPlaying && !isYouTubePlaying) {
+      setDisplayListeners((prev) => prev + 1); // tambah +1 saat klik play
+    }
+    toggleLivePlayback();
+  };
 
   useEffect(() => {
     if (window.YT?.Player) {
@@ -125,7 +157,6 @@ export default function LiveSection() {
             if (event.data === 0 || event.data === 2) {
               setIsYouTubePlaying(false);
             }
-
             if (event.data === 1) {
               setIsYouTubePlaying(true);
             }
@@ -150,7 +181,6 @@ export default function LiveSection() {
       stopYouTube();
       return;
     }
-
     playYouTube();
   }, [playYouTube, stopYouTube]);
 
@@ -176,7 +206,6 @@ export default function LiveSection() {
         if (isPlayingRef.current) {
           togglePlay();
         }
-
         return;
       }
 
@@ -197,6 +226,7 @@ export default function LiveSection() {
     return () => clearInterval(interval);
   }, [checkLiveStatus]);
 
+  // CANVAS VISUALIZER
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -339,7 +369,7 @@ export default function LiveSection() {
       cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resize);
     };
-  }, [isPlaying, isYouTubePlaying, isYouTubeLive, youtubeVideoId, analyserRef]);
+  }, [isPlaying, isYouTubePlaying, analyserRef]);
 
   return (
     <section className="relative overflow-hidden bg-black py-12 sm:py-16 lg:py-20 px-4 sm:px-6">
@@ -381,12 +411,12 @@ export default function LiveSection() {
 
           <div className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-3 sm:items-center sm:justify-between">
             <div className="text-center sm:text-left text-emerald-400 text-sm font-bold">
-              👥 {listeners} Pendengar
+              👥 {displayListeners} Pendengar
             </div>
 
             <button
               type="button"
-              onClick={toggleLivePlayback}
+              onClick={handleTogglePlay}
               className={`w-full sm:w-auto px-6 sm:px-8 lg:px-12 py-3 lg:py-4 rounded-xl font-black uppercase tracking-wide transition-all active:scale-95 ${
                 isPlaying || isYouTubePlaying
                   ? "bg-red-600 hover:bg-red-500 text-white"
@@ -398,6 +428,7 @@ export default function LiveSection() {
           </div>
         </div>
 
+        {/* Hidden YouTube Container */}
         <div
           ref={iframeContainerRef}
           style={{ width: 1, height: 1, opacity: 0, overflow: "hidden" }}
