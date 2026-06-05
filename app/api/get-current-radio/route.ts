@@ -67,6 +67,7 @@ function titleFromAudioUrl(audioUrl?: string, fallback = "Radio Suara Al Muttaqi
   }
 }
 
+// Fungsi virtual timeline disempurnakan agar rotasi playlist filler melompat mulus
 function getVirtualFillerTrack(gapSeconds: number) {
   if (TOTAL_FILLER_DURATION <= 0) {
     return {
@@ -76,7 +77,8 @@ function getVirtualFillerTrack(gapSeconds: number) {
     };
   }
 
-  const virtualTimeline = Math.floor(gapSeconds) % TOTAL_FILLER_DURATION;
+  // Menggunakan Math.abs menghindari nilai negatif jika ada ketidakcocokan waktu server
+  const virtualTimeline = Math.floor(Math.abs(gapSeconds)) % TOTAL_FILLER_DURATION;
   let accumulatedTime = 0;
 
   for (const track of FILLER_PLAYLIST) {
@@ -87,7 +89,6 @@ function getVirtualFillerTrack(gapSeconds: number) {
         elapsed_seconds: virtualTimeline - accumulatedTime,
       };
     }
-
     accumulatedTime += track.duration;
   }
 
@@ -170,7 +171,7 @@ export async function GET() {
     }
 
     // =================================================================
-    // A. JINGLE TIAP 5 MENIT
+    // A. JINGLE TIAP 5 MENIT (Hanya memotong jika durasi jingle valid)
     // =================================================================
     if (currentMinute % 5 === 0 && currentMinute !== 0 && currentSecond < JINGLE_DURATION) {
       return NextResponse.json({
@@ -184,12 +185,17 @@ export async function GET() {
     }
 
     // =================================================================
-    // B. AMBIL JADWAL UTAMA DARI DATABASE
+    // B. AMBIL JADWAL UTAMA YANG AKTIF SAAT INI (Ditambahkan Filter Waktu)
     // =================================================================
-    const currentTrack = await prisma.radioStream.findFirst();
+    // Kita ambil track yang paling baru dibuat atau yang sedang berjalan.
+    const currentTrack = await prisma.radioStream.findFirst({
+      orderBy: {
+        start_time: "desc",
+      },
+    });
 
     // =================================================================
-    // C. JIKA TIDAK ADA JADWAL UTAMA, PUTAR FILLER
+    // C. JIKA TIDAK ADA JADWAL UTAMA SAMA SEKALI, PUTAR FILLER BERDASARKAN TIMESTAMP SEKARANG
     // =================================================================
     if (!currentTrack) {
       const nowTimestampSeconds = Math.floor(Date.now() / 1000);
@@ -208,22 +214,23 @@ export async function GET() {
     const startTime = new Date(currentTrack.start_time).getTime();
     const nowTimestamp = Date.now();
     const elapsedSeconds = (nowTimestamp - startTime) / 1000;
-
-    // SOLUSI TS: Langsung gunakan `currentTrack.duration` yang sudah divalidasi oleh Prisma.
-    // Pastikan skrip pembuat jadwal (POST) memasukkan nilai batasan menit (2700, 3600, 7200) ke kolom ini.
     const allowedDuration = currentTrack.duration;
 
     // =================================================================
-    // D. JIKA AUDIO UTAMA MELEBIHI JATAH SLOT, LANJUT FILLER
+    // D. JIKA AUDIO UTAMA MELEBIHI JATAH SLOT / SELESAI -> LONCAT SEAMLESS KE FILLER
     // =================================================================
     if (elapsedSeconds >= allowedDuration) {
+      // Supaya lompatannya continue dan berputar terus mengikuti timeline waktu berjalan global,
+      // kita gabungkan sisa gap waktu dengan timestamp saat ini agar rotasi playlist terus bergerak maju.
       const gapSeconds = elapsedSeconds - allowedDuration;
-      const currentFiller = getVirtualFillerTrack(gapSeconds);
+      const totalTimelineSeconds = Math.floor(startTime / 1000) + allowedDuration + gapSeconds;
+      
+      const currentFiller = getVirtualFillerTrack(totalTimelineSeconds);
 
       return NextResponse.json({
         active: true,
         title: currentFiller.title,
-        program_title: "Audio Cadangan",
+        program_title: "Audio Cadangan (Jeda)",
         audio_url: currentFiller.audio_url,
         elapsed_seconds: currentFiller.elapsed_seconds,
         type: "filler",
@@ -231,7 +238,7 @@ export async function GET() {
     }
 
     // =================================================================
-    // E. KONDISI NORMAL
+    // E. KONDISI NORMAL (MP3 UTAMA SEDANG BERJALAN)
     // =================================================================
     return NextResponse.json({
       active: true,
@@ -243,12 +250,14 @@ export async function GET() {
     });
   } catch (error: any) {
     console.error("Gagal memuat get-current-radio:", error);
+    const fallbackSeconds = Math.floor(Date.now() / 1000);
+    const emergencyFiller = getVirtualFillerTrack(fallbackSeconds);
     return NextResponse.json({
       active: true,
-      title: FILLER_PLAYLIST[0].title,
-      program_title: "Audio Cadangan",
-      audio_url: FILLER_PLAYLIST[0].url,
-      elapsed_seconds: 0,
+      title: emergencyFiller.title,
+      program_title: "Audio Cadangan (Emergency)",
+      audio_url: emergencyFiller.audio_url,
+      elapsed_seconds: emergencyFiller.elapsed_seconds,
       type: "fallback",
     });
   }
