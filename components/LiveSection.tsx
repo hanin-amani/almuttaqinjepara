@@ -12,24 +12,6 @@ declare global {
   }
 }
 
-function getYouTubeVideoId(rawUrl: string) {
-  try {
-    const url = new URL(rawUrl);
-
-    if (url.hostname.includes("youtu.be")) {
-      return url.pathname.replace("/", "") || null;
-    }
-
-    if (url.pathname.startsWith("/live/") || url.pathname.startsWith("/shorts/")) {
-      return url.pathname.split("/")[2] || null;
-    }
-
-    return url.searchParams.get("v");
-  } catch {
-    return null;
-  }
-}
-
 export default function LiveSection() {
   const {
     isPlaying,
@@ -189,15 +171,14 @@ export default function LiveSection() {
     return () => registerYouTubeToggle(null);
   }, [registerYouTubeToggle, toggleYouTube]);
 
+  // 🟢 SYNC JALUR TERBARU: Menyelaraskan konsumsi objek JSON fresh hasil olahan Sanity
   const checkLiveStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/get-current-radio", { cache: "no-store" });
       const data = await res.json();
 
-      const nextVideoId =
-        data.type === "youtube_live" && data.audio_url
-          ? getYouTubeVideoId(data.audio_url)
-          : null;
+      // Langsung membaca "youtube_video_id" murni dari API penyiaran baru kita
+      const nextVideoId = data.type === "youtube_live" && data.youtube_video_id ? data.youtube_video_id : null;
 
       if (nextVideoId) {
         setYoutubeVideoId(nextVideoId);
