@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic"; // Memaksa API selalu fresh tanpa membek
 // 1. KONFIGURASI JINGLE OTOMATIS
 // =================================================================
 const JINGLE_URL = "/audio/jingle.mp3";
-const JINGLE_DURATION = 25;
+const JINGLE_DURATION = 15;
 
 // =================================================================
 // 2. DAFTAR AUDIO CADANGAN (FILLER)
