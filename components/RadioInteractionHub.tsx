@@ -15,8 +15,19 @@ const supabase = createClient(
 // 🟢 MANTRA KEAMANAN NEXT.JS: Menjamin Turbopack meloloskan komponen interaksi tanpa optimasi kaku pas build
 export const dynamic = "force-dynamic";
 
+// Fungsi Pembantu Memberikan Icon Unik Berdasarkan Judul Acara Sanity
+const getAcaraIcon = (title: string) => {
+  const t = title.toLowerCase();
+  if (t.includes("kajian") || t.includes("pengajian")) return "📖";
+  if (t.includes("murottal") || t.includes("murotal")) return "🎵";
+  if (t.includes("nasyid")) return "☀️";
+  if (t.includes("keluarga") || t.includes("parenting")) return "🏠";
+  return "💡";
+};
+
 export default function RadioInteractionHub() {
   const [currentPlaylist, setCurrentPlaylist] = useState<string>("");
+  const [scheduleData, setScheduleData] = useState<any[]>([]); // 🟢 DINAMIS: Menampung jadwal siaran otomatis dari Sanity
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [username, setUsername] = useState("");
@@ -25,31 +36,21 @@ export default function RadioInteractionHub() {
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Data jadwal internal diselaraskan dengan Purwokerto / Banyumas Hub
-  const scheduleData = [
-    { time: "06:00", title: "Nasyid Pagi", icon: "☀️" },
-    { time: "07:00", title: "Pengajian Umum", icon: "📖" },
-	{ time: "09:00", title: "Kajian Aqidah", icon: "📖" },
-    { time: "10:00", title: "Kajian Keluarga Sakinah", icon: "🏠" },
-	{ time: "11:00", title: "Kajian ustadz Alumni", icon: "📖" },
-	{ time: "12:00", title: "Murottal Siang", icon: "🎵" },
-    { time: "13:00", title: "Kajian Tematik", icon: "💡" },
-    { time: "16:00", title: "Taujih Sore Ust. Sartono", icon: "🌇" },
-    { time: "17:15", title: "Murottal Anak", icon: "🌙" },
-	{ time: "18:15", title: "Murotal Merdu", icon: "🎵" },
-    { time: "19:30", title: "Tazkiyatun Nafs", icon: "💎" },
-    { time: "21:00", title: "Kajian Parenting", icon: "👨‍👩‍👧" },
-    { time: "22:00", title: "Nasyid Lawas", icon: "🎵" },
-  ];
-
+  // Fungsi Sinkronisasi Mengambil Data Lagu Aktif Sekaligus Rangkaian Jadwal Sanity CMS
   const syncVirtualRadioName = useCallback(async () => {
     try {
       const res = await fetch("/api/get-current-radio", { cache: "no-store" });
       const data = await res.json();
+      
       if (data && data.active) {
         setCurrentPlaylist(data.title);
       } else {
         setCurrentPlaylist("");
+      }
+
+      // Amankan data array jadwal Sanity dari API
+      if (data && data.allSchedules && Array.isArray(data.allSchedules)) {
+        setScheduleData(data.allSchedules);
       }
     } catch (e) {
       console.error("Gagal sinkronisasi nama playlist virtual:", e);
@@ -115,23 +116,19 @@ export default function RadioInteractionHub() {
     const messageContent = newMessage.trim();
 
     try {
-      // 🚀 KIRIM KE SERVER ACTION BENAR-BENAR BYPASS VIA SERVICE ROLE KEY
       const result = await sendChatMessage(username, messageContent);
       
-      // 🟢 PERBAIKAN STRUKTUR: Mendeteksi kelolosan data secara akurat tanpa terjebak status .success lama
       if (result && (result.success || !result.error)) {
         setNewMessage("");
         const freshData = await getChatMessages();
         setMessages(freshData || []);
       } else {
-        // Tampilkan error asli server jika ada kegagalan riil
         alert(`Gagal kirim pesan: ${result?.error || "Terjadi kendala interaksi server."}`);
       }
     } catch (err) {
       console.error("💥 Eror pengiriman pesan dakwah:", err);
       alert("Gagal kirim pesan, silakan segarkan halaman dan coba lagi.");
     } finally {
-      // 🟢 FIX STRUKTUR SINTAKS: Memperbaiki skema kurung tutup liar kemarin menjadi block finally yang sah
       setIsSending(false);
     }
   };
@@ -141,7 +138,7 @@ export default function RadioInteractionHub() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch h-auto lg:h-[700px]">
         
         {/* =========================================================
-            JADWAL SIARAN (Panel Kiri)
+            JADWAL SIARAN (Panel Kiri - Otomatis Mengikuti Sanity CMS)
             ========================================================= */}
         <div className="lg:col-span-4 bg-slate-900 rounded-3xl shadow-2xl border-b-4 border-slate-950 flex flex-col overflow-hidden border border-white/5">
           <div className="p-5 bg-emerald-950 flex items-center justify-between border-b border-emerald-500/30">
@@ -154,27 +151,33 @@ export default function RadioInteractionHub() {
           </div>
           
           <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-            {scheduleData.map((prog, index) => {
-              const isLive = currentPlaylist && (
-                currentPlaylist.toLowerCase().includes(prog.title.toLowerCase()) ||
-                prog.title.toLowerCase().includes(currentPlaylist.toLowerCase())
-              );
+            {scheduleData.length === 0 ? (
+              <p className="text-center text-xs text-slate-500 py-8">Memuat data siaran Sanity...</p>
+            ) : (
+              scheduleData.map((prog, index) => {
+                const isLive = currentPlaylist && (
+                  currentPlaylist.toLowerCase().includes(prog.eventName?.toLowerCase()) ||
+                  prog.eventName?.toLowerCase().includes(currentPlaylist.toLowerCase())
+                );
 
-              return (
-                <div key={index} className={`flex items-center justify-between p-4 border transition-all rounded-2xl ${
-                  isLive ? "bg-emerald-600 border-emerald-400 shadow-xl scale-[1.01]" : "bg-white/5 border-white/5"
-                }`}>
-                  <div className="flex items-center gap-4 text-left text-white">
-                    <span className="text-xl">{prog.icon}</span>
-                    <div>
-                      <p className="text-[9px] font-mono font-black uppercase tracking-widest opacity-50">{prog.time}</p>
-                      <h4 className="text-xs font-black uppercase italic tracking-tight">{prog.title}</h4>
+                return (
+                  <div key={index} className={`flex items-center justify-between p-4 border transition-all rounded-2xl ${
+                    isLive ? "bg-emerald-600 border-emerald-400 shadow-xl scale-[1.01]" : "bg-white/5 border-white/5"
+                  }`}>
+                    <div className="flex items-center gap-4 text-left text-white">
+                      <span className="text-xl">{getAcaraIcon(prog.eventName || "")}</span>
+                      <div>
+                        <p className="text-[9px] font-mono font-black uppercase tracking-widest opacity-50">
+                          {prog.startTime} - {prog.endTime}
+                        </p>
+                        <h4 className="text-xs font-black uppercase italic tracking-tight">{prog.eventName}</h4>
+                      </div>
                     </div>
+                    {isLive && <Zap size={14} className="text-white animate-pulse" />}
                   </div>
-                  {isLive && <Zap size={14} className="text-white animate-pulse" />}
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -182,8 +185,6 @@ export default function RadioInteractionHub() {
             LIVE CHAT (Panel Kanan - Gaya WhatsApp Premium)
             ========================================================= */}
         <div className="lg:col-span-8 bg-[#efeae2] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 relative">
-          
-          {/* Header Chat Ruang Komunitas */}
           <div className="p-4 bg-[#075e54] flex items-center justify-between shadow-md z-10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-emerald-800 rounded-full flex items-center justify-center border border-white/10 shadow-inner">
@@ -196,7 +197,6 @@ export default function RadioInteractionHub() {
             </div>
           </div>
 
-          {/* Area Isi Pesan Chat */}
           <div 
             ref={scrollRef} 
             className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 custom-scrollbar text-left relative bg-opacity-40"
@@ -234,7 +234,6 @@ export default function RadioInteractionHub() {
             })}
           </div>
 
-          {/* Form Input Chat & Nama */}
           <div className="p-3 bg-[#f0f2f5] border-t border-slate-200">
             {!user ? (
               <div className="flex flex-col sm:flex-row items-center justify-between p-3 bg-emerald-50/60 border border-emerald-100/30 rounded-xl gap-3 w-full">

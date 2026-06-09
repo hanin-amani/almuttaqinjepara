@@ -115,6 +115,9 @@ function getVirtualFillerTrack(gapSeconds: number) {
 // MAIN HANDLER GET
 // =================================================================
 export async function GET() {
+  // Variabel penampung cadangan jadwal agar cakupan cakrawala data tetap aman
+  let cachedSchedules: any[] = [];
+
   try {
     const now = new Date();
 
@@ -147,6 +150,9 @@ export async function GET() {
       const config = await client.fetch(sanityQuery, {}, { cache: 'no-store' });
 
       if (config && config.schedules && Array.isArray(config.schedules)) {
+        // Amankan array jadwal asli Sanity ke variabel penampung global
+        cachedSchedules = config.schedules;
+
         // Ekstraksi Waktu lokal Asia/Jakarta (WIB) yang antipeluru di Vercel Server
         const timeFormatter = new Intl.DateTimeFormat('id-ID', {
           timeZone: 'Asia/Jakarta',
@@ -210,7 +216,8 @@ export async function GET() {
               artist: activeSchedule.speaker || "Pondok Pesantren Al Muttaqin",
               program_title: stationName,
               audio_url: videoId ? `https://www.youtube.com/watch?v=${videoId}` : null,
-              elapsed_seconds: 0
+              elapsed_seconds: 0,
+              allSchedules: cachedSchedules // 🟢 SUNTIKAN SINKRONISASI JADWAL
             });
           }
 
@@ -226,7 +233,8 @@ export async function GET() {
               artist: activeSchedule.speaker || "Radio Mitra",
               program_title: stationName,
               audio_url: relayUrl,
-              elapsed_seconds: 0
+              elapsed_seconds: 0,
+              allSchedules: cachedSchedules // 🟢 SUNTIKAN SINKRONISASI JADWAL
             });
           }
 
@@ -249,6 +257,7 @@ export async function GET() {
               program_title: stationName,
               audio_url: selectedTrack?.audioFileUrl || null,
               elapsed_seconds: trackElapsedSeconds,
+              allSchedules: cachedSchedules // 🟢 SUNTIKAN SINKRONISASI JADWAL
             });
           } else {
             // BACKUP FILLER INTERNAL SANITY: Jika playlist di dokumen aktif kosong, putar filler otomatis
@@ -269,6 +278,7 @@ export async function GET() {
               program_title: activeSchedule.eventName || stationName,
               audio_url: selectedFiller.url,
               elapsed_seconds: trackElapsedSeconds,
+              allSchedules: cachedSchedules // 🟢 SUNTIKAN SINKRONISASI JADWAL
             });
           }
         }
@@ -293,6 +303,7 @@ export async function GET() {
         audio_url: JINGLE_URL,
         elapsed_seconds: currentSecond,
         type: "jingle",
+        allSchedules: cachedSchedules // 🟢 SUNTIKAN SINKRONISASI JADWAL
       });
     }
 
@@ -319,6 +330,7 @@ export async function GET() {
         audio_url: currentFiller.audio_url,
         elapsed_seconds: currentFiller.elapsed_seconds,
         type: "filler",
+        allSchedules: cachedSchedules // 🟢 SUNTIKAN SINKRONISASI JADWAL
       });
     }
 
@@ -343,6 +355,7 @@ export async function GET() {
         audio_url: currentFiller.audio_url,
         elapsed_seconds: currentFiller.elapsed_seconds,
         type: "filler",
+        allSchedules: cachedSchedules // 🟢 SUNTIKAN SINKRONISASI JADWAL
       });
     }
 
@@ -356,6 +369,7 @@ export async function GET() {
       audio_url: currentTrack.audio_url,
       elapsed_seconds: elapsedSeconds,
       type: "main",
+      allSchedules: cachedSchedules // 🟢 SUNTIKAN SINKRONISASI JADWAL
     });
 
   } catch (error: any) {
@@ -369,6 +383,7 @@ export async function GET() {
       audio_url: emergencyFiller.audio_url,
       elapsed_seconds: emergencyFiller.elapsed_seconds,
       type: "fallback",
+      allSchedules: cachedSchedules // 🟢 SUNTIKAN SINKRONISASI JADWAL
     });
   }
 }
