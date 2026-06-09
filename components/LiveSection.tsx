@@ -381,10 +381,12 @@ export default function LiveSection() {
 
               <div className="mt-4 text-center md:text-left">
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-black text-white leading-tight">
-                  {metadata?.title || "Radio Suara Al Muttaqin"}
+                  {/* ✅ PERBAIKAN CADANGAN: Mengganti teks fallback kosong dari "Radio Suara" ke "RSM On Air" */}
+                  {metadata?.title || "RSM On Air"}
                 </h3>
                 <p className="mt-2 text-xs sm:text-sm text-emerald-400 uppercase tracking-wider">
-                  {isYouTubeLive ? "YouTube Live Stream" : metadata?.artist || "Virtual Live Stream"}
+                  {/* ✅ PERBAIKAN UTAMA: Mengganti tulisan "YouTube Live Stream" mentah menjadi nama radio penuh */}
+                  {isYouTubeLive ? "RADIO SUARA AL MUTTAQIN" : metadata?.artist || "Virtual Live Stream"}
                 </p>
               </div>
             </div>
