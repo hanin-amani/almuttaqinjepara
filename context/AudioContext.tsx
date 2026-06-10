@@ -89,7 +89,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const JINGLE_FILE = "/audio/jingle.mp3";
 
   // =================================================================
-  // ⚙️ ENGINE CORE: URUTAN HOISTING ANTI INFINITE LOOP 
+  // ⚙️ ENGINE CORE INITIALIZER WITH FIX HOISTING
   // =================================================================
 
   const initAudio = useCallback(() => {
@@ -185,7 +185,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     setIsPlaying(false);
   }, []);
 
-  // 🟢 AMAN LUR: Fungsi Media Session dipisah total tanpa mengikat handler trigger internal
   const staticLockscreenUpdate = useCallback((title: string, artist: string, artUrl: string) => {
     if (typeof window !== "undefined" && "mediaSession" in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
@@ -299,33 +298,50 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
   }, [stopMp3Playback, initAudio, staticLockscreenUpdate]);
 
+  // 🟢 REPARASI MUTLAK: Proteksi dan Penyuntikan Fallback Audio URL Valid
   const startPlayback = useCallback(async () => {
     try {
       const audio = audioRef.current;
-      if (audio && audio.src && audio.src !== "" && audio.src !== window.location.href) {
-        audio.volume = volumeRef.current;
-        if (audioContextRef.current && audioContextRef.current.state === "suspended") {
-          await audioContextRef.current.resume();
+      if (!audio) return;
+
+      // Proteksi Berlapis: Jika src kosong, null, atau tidak sengaja mengarah ke alamat dokumen web
+      if (!audio.src || audio.src === "" || audio.src === window.location.href || audio.src.includes("null") || audio.src.includes("undefined")) {
+        console.warn("[Audio Engine] Menangani URL kosong/rusak. Melakukan injeksi pengaman...");
+        const res = await fetchCurrentRadioStatusFromBackend();
+        
+        if (res && res.audio_url && res.audio_url !== "" && !res.audio_url.includes("null")) {
+          audio.src = res.audio_url;
+        } else {
+          // Fallback Darurat Medis: Jika Sanity/Database beneran kosong melompong, lempar ke file murottal jeda pertama agar browser tidak crash NotSupportedError
+          audio.src = "https://sdit.my.id/radio/SurahAlMulk-Saad-Al-Ghamdi.mp3";
         }
-        await audio.play();
-        userStoppedRef.current = false;
-        setIsPlaying(true);
-        setHasError(false);
-        if (typeof window !== "undefined" && "mediaSession" in navigator) {
-          navigator.mediaSession.playbackState = "playing";
-        }
-        return;
+        audio.load();
       }
-      await fetchMetadata();
+
+      audio.volume = volumeRef.current;
+      if (audioContextRef.current && audioContextRef.current.state === "suspended") {
+        await audioContextRef.current.resume();
+      }
+
+      await audio.play();
+      userStoppedRef.current = false;
+      setIsPlaying(true);
+      setHasError(false);
+      
+      if (typeof window !== "undefined" && "mediaSession" in navigator) {
+        navigator.mediaSession.playbackState = "playing";
+      }
     } catch (err) {
+      console.error("💥 Gagal memutar forced audio stream:", err);
       setHasError(true);
       setIsPlaying(false);
     }
-  }, [fetchMetadata]);
+  }, []);
 
   const togglePlay = useCallback(async () => {
     if (!audioRef.current) return;
     if (!isInitialized.current) initAudio();
+    
     if (isPlaying) {
       stopMp3Playback();
       return;
@@ -373,7 +389,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         jingleRef.current.preload = "auto";
         jingleRef.current.crossOrigin = "anonymous";
         jingleRef.current.onerror = () => {
-          console.error("Jingle gagal dimuat");
           if (audioRef.current && isPlayingRef.current) audioRef.current.volume = volumeRef.current;
           isJinglePlayingRef.current = false;
         };
@@ -386,7 +401,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         try {
           if (jingleRef.current) await jingleRef.current.play();
         } catch (playErr) {
-          console.error("Jingle blocked:", playErr);
           if (audioRef.current && isPlayingRef.current) audioRef.current.volume = volumeRef.current;
           isJinglePlayingRef.current = false;
         }
@@ -402,7 +416,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         isJinglePlayingRef.current = false;
       };
     } catch (err) {
-      console.error("Gagal jingle:", err);
       if (audioRef.current && isPlayingRef.current) audioRef.current.volume = volumeRef.current;
       isJinglePlayingRef.current = false;
     }
@@ -442,7 +455,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [fetchMetadata]);
 
-  // 🟢 ATUR ACTION HANDLER MEDIA SESSION DISINI (Agar tidak bentrok lifecycle)
   useEffect(() => {
     if (typeof window !== "undefined" && "mediaSession" in navigator) {
       navigator.mediaSession.setActionHandler("play", () => { toggleLivePlayback(); });
@@ -505,6 +517,12 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         youtubeThumbnail,
       }}
     >
+      <audio
+        ref={audioRef}
+        crossOrigin="anonymous"
+        preload="none"
+        className="hidden"
+      />
       {children}
     </AudioContext.Provider>
   );
