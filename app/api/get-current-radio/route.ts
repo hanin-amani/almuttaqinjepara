@@ -11,13 +11,11 @@ export const revalidate = 0; // Mematikan optimasi cache statis Vercel secara to
 // 1. KONFIGURASI INTERUPSI ADZAN JEPARA OTOMATIS
 // =================================================================
 const ADZAN_URL = "/audio/adzan.mp3";
-const ADZAN_DURATION_SECONDS = 300; // Estimasi rata-rata durasi file adzan.mp3 Anda (5 menit)
+const ADZAN_DURATION_SECONDS = 300; // Estimasi durasi file adzan.mp3 Anda (5 menit)
 
-// Koordinat Geografis Kabupaten Jepara, Jawa Tengah (Metode Kemenag / MABIMS)
-// Menggunakan API Aladhan dengan kalkulasi otomatis zona Asia/Jakarta
-const JEPARA_LATITUDE = -6.5891;
-const JEPARA_LONGITUDE = 110.6784;
-const METHOD_KEMENAG = 20; // Islamic Society of North America / Kemenag RI (Toleransi Selaras)
+// Konfigurasi Aladhan API Menggunakan Alamat Presisi Wilayah Jepara
+const JEPARA_ADDRESS = "Jepara,Central+Java,Indonesia";
+const METHOD_KEMENAG = 20; // Metode Kemenag RI / MABIMS Toleransi Selaras
 
 // =================================================================
 // 2. KONFIGURASI JINGLE OTOMATIS
@@ -158,14 +156,24 @@ export async function GET() {
     const currentTotalMinutes = currentHours * 60 + currentMinutes;
 
     // =================================================================
-    // 📿 KASTA TERTINGGI (KASTA 0): INTERUPSI ADZAN OTOMATIS WILAYAH JEPARA
+    // 📿 KASTA TERTINGGI (KASTA 0): INTERUPSI ADZAN OTOMATIS JEPARA
     // =================================================================
     try {
-      const timestampUnix = Math.floor(now.getTime() / 1000);
-      // Panggil API Jadwal Sholat Terpercaya dengan koordinat presisi Jepara
+      // 🟢 PERBAIKAN UTAMA: Ambil kalender tanggal hari ini presisi WIB di Jepara (DD-MM-YYYY)
+      const jktDateFormatter = new Intl.DateTimeFormat('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      
+      // Mengubah format lokal "11/06/2026" menjadi "11-06-2026" sesuai standar API Aladhan
+      const formattedDateForAPI = jktDateFormatter.format(now).replace(/\//g, '-');
+
+      // Tembak API Aladhan berdasarkan alamat geografis terikat kalender tetap WIB
       const prayerRes = await fetch(
-        `https://api.aladhan.com/v1/timings/${timestampUnix}?latitude=${JEPARA_LATITUDE}&longitude=${JEPARA_LONGITUDE}&method=${METHOD_KEMENAG}`,
-        { next: { revalidate: 3600 } } // Cache jadwal sholat selama 1 jam saja agar hemat limit API
+        `https://api.aladhan.com/v1/timingsByAddress/${formattedDateForAPI}?address=${JEPARA_ADDRESS}&method=${METHOD_KEMENAG}`,
+        { next: { revalidate: 3600 } } // Cache aman 1 jam di jaringan Vercel edge
       );
       
       if (prayerRes.ok) {
@@ -173,7 +181,7 @@ export async function GET() {
         const timings = prayerData?.data?.timings;
 
         if (timings) {
-          // Kita ambil 5 Waktu Sholat Wajib Utama
+          // Kita ambil 5 Waktu Sholat Wajib Utama Jepara
           const jadwalSholatWajib = [
             { nama: "Adzan Subuh", waktu: timings.Fajr },
             { nama: "Adzan Dzuhur", waktu: timings.Dhuhr },
@@ -247,7 +255,7 @@ export async function GET() {
           timeZone: 'Asia/Jakarta',
           weekday: 'long'
         });
-        const currentDayName = dayFormatter.format(now);
+        const currentDayName = dayFormatter.format(now).trim().toLowerCase();
 
         let activeSchedule = null;
         for (const schedule of config.schedules) {
@@ -257,8 +265,7 @@ export async function GET() {
           const isTimeMatch = currentTotalMinutes >= start && currentTotalMinutes < end;
           
           const sDay = (schedule.day || '').trim().toLowerCase();
-          const cDay = currentDayName.trim().toLowerCase();
-          const isDayMatch = sDay === 'everyday' || sDay === cDay;
+          const isDayMatch = sDay === 'everyday' || sDay === currentDayName;
 
           if (isTimeMatch && isDayMatch) {
             activeSchedule = schedule;

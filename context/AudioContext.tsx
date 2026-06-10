@@ -298,24 +298,21 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
   }, [stopMp3Playback, initAudio, staticLockscreenUpdate]);
 
-  // 🟢 REPARASI MUTLAK: Proteksi dan Penyuntikan Fallback Audio URL Valid
+  // 🟢 REPARASI MUTLAK: Ditambahkan Fallback Paksa Menuju Proxy PHP Hawkhost jika Mengalami NotSupportedError
   const startPlayback = useCallback(async () => {
     try {
       const audio = audioRef.current;
       if (!audio) return;
 
-      // Proteksi Berlapis: Jika src kosong, null, atau tidak sengaja mengarah ke alamat dokumen web
       if (!audio.src || audio.src === "" || audio.src === window.location.href || audio.src.includes("null") || audio.src.includes("undefined")) {
-        console.warn("[Audio Engine] Menangani URL kosong/rusak. Melakukan injeksi pengaman...");
         const res = await fetchCurrentRadioStatusFromBackend();
-        
-        if (res && res.audio_url && res.audio_url !== "" && !res.audio_url.includes("null")) {
+        if (res && res.audio_url) {
           audio.src = res.audio_url;
-        } else {
-          // Fallback Darurat Medis: Jika Sanity/Database beneran kosong melompong, lempar ke file murottal jeda pertama agar browser tidak crash NotSupportedError
-          audio.src = "https://sdit.my.id/radio/SurahAlMulk-Saad-Al-Ghamdi.mp3";
+          audio.load();
+          if (res.elapsed_seconds && res.elapsed_seconds > 2) {
+            audio.currentTime = res.elapsed_seconds;
+          }
         }
-        audio.load();
       }
 
       audio.volume = volumeRef.current;
@@ -332,9 +329,25 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         navigator.mediaSession.playbackState = "playing";
       }
     } catch (err) {
-      console.error("💥 Gagal memutar forced audio stream:", err);
-      setHasError(true);
-      setIsPlaying(false);
+      console.error("Gagal memutar audio murni, mengalihkan paksa ke proxy PHP Hawkhost...", err);
+      
+      // FALLBACK DARURAT: Jika pemutaran direct CDN Sanity ditolak browser, tembak langsung proxy php Hawkhost penyuplai chunk mpeg stabil
+      const audio = audioRef.current;
+      if (audio) {
+        audio.src = "http://ybmsaum.com/radio/stream.php";
+        audio.load();
+        audio.play()
+          .then(() => {
+            userStoppedRef.current = false;
+            setIsPlaying(true);
+            setHasError(false);
+          })
+          .catch((finalErr) => {
+            console.error("Bypass proxy gagal:", finalErr);
+            setHasError(true);
+            setIsPlaying(false);
+          });
+      }
     }
   }, []);
 
