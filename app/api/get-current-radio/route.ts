@@ -11,7 +11,7 @@ export const revalidate = 0; // Mematikan optimasi cache statis Vercel secara to
 // 1. KONFIGURASI INTERUPSI ADZAN JEPARA OTOMATIS
 // =================================================================
 const ADZAN_URL = "/audio/adzan.mp3";
-const ADZAN_DURATION_SECONDS = 180; // Estimasi rata-rata durasi file adzan.mp3 Anda (3 menit)
+const ADZAN_DURATION_SECONDS = 300; // Estimasi rata-rata durasi file adzan.mp3 Anda (5 menit)
 
 // Koordinat Geografis Kabupaten Jepara, Jawa Tengah (Metode Kemenag / MABIMS)
 // Menggunakan API Aladhan dengan kalkulasi otomatis zona Asia/Jakarta
