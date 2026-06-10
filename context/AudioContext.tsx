@@ -79,7 +79,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const JINGLE_INTERVAL = 5 * 60 * 1000; 
   const JINGLE_FILE = "/audio/jingle.mp3";
 
-  // 🟢 OPTIMASI MUTE SUARA: Menghentikan audio MP3 internal dengan halus tanpa memutus sambungan buffer
+  // OPTIMASI MUTE SUARA
   const stopMp3Playback = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -99,7 +99,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     isAutoSwitchingRef.current = false;
 
     try {
-      audio.pause(); // Langsung pause untuk menghemat kuota streaming relay/MP3 jemaah
+      audio.pause();
     } catch (e) {
       console.warn("Pause handling error:", e);
     }
@@ -107,7 +107,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     setIsPlaying(false);
   }, []);
 
-  // 🟢 BUFFER RESET ANTI-SENDAT: Mengosongkan memori audio secara mutlak untuk mode transisi berat
+  // BUFFER RESET ANTI-SENDAT
   const resetMp3PlaybackCompletely = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -191,7 +191,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     }
   }, [JINGLE_FILE]);
 
-  // Inisialisasi Audio Engine Web Audio API secara aman & jernih
+  // Inisialisasi Audio Engine Web Audio API
   const initAudio = useCallback(() => {
     if (isInitialized.current || !audioRef.current) return;
 
@@ -225,7 +225,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // =================================================================
-  // POLLING SYNC: KONSUMSI MONITORING LIVE STREAMING & RELAY AUDIO JERNIH
+  // POLLING SYNC: SEAMLESS AUTO-SWITCH INTERUPSI ADZAN JEPARA JERNIH
   // =================================================================
   const fetchMetadata = useCallback(async () => {
     try {
@@ -242,8 +242,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // 🔴 CASE A: AREA TRANSMISI YOUTUBE LIVE
-      if (data.type === "youtube_live") {
+      // Deteksi Apakah Detik Ini Bertepatan Dengan Waktu Adzan Jepara
+      const isAdzanTime = data.title && data.title.toLowerCase().includes("adzan");
+
+      // 🔴 CASE A: AREA TRANSMISI YOUTUBE LIVE (Hanya berjalan jika sedang tidak Adzan)
+      if (data.type === "youtube_live" && !isAdzanTime) {
         if (isPlayingRef.current) {
           stopMp3Playback();
         }
@@ -258,8 +261,15 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      // 🔴 CASE B: AREA TRANSMISI AUDIO STREAM MP3 / RELAY RADIO FM LAIN
-      if (data.type === "playlist_mp3" || data.type === "relay_stream" || data.audio_url) {
+      // 🔴 CASE B: AREA TRANSMISI PLAYLIST MP3 / RELAY / INTERUPSI ADZAN
+      if (data.type === "playlist_mp3" || data.type === "relay_stream" || data.audio_url || isAdzanTime) {
+        
+        // JALUR PENGAMAN ADZAN: Jika radio sedang memutar YouTube Live, paksa matikan demi Adzan HTML5 Audio lokal
+        if (isAdzanTime && isYouTubePlayingRef.current && youtubeToggleRef.current) {
+          isAutoSwitchingRef.current = true;
+          youtubeToggleRef.current(); // Stop paksa YouTube Player tersembunyi
+        }
+
         setIsYouTubeLive(false);
         setYoutubeVideoId(null);
         
@@ -272,21 +282,31 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         const audio = audioRef.current;
         if (audio && data.audio_url) {
           
-          // 🟢 PENANGANAN RELAY DAN BUFFER ANTI LONCAT:
           if (audio.src !== data.audio_url) {
             audio.src = data.audio_url;
             audio.load();
             
-            // JALANKAN SEEK CATCH-UP HANYA JIKA BUKAN RELAY LIVE AUDIO LIVE
+            // Catch-up timeline detik berjalan riil (di-bypass jika mode relay stasiun luar)
             if (data.type !== "relay_stream" && data.elapsed_seconds && data.elapsed_seconds > 2) {
               audio.currentTime = data.elapsed_seconds;
             }
 
-            if (isPlayingRef.current) {
-              audio.play().catch(err => console.warn("Autoplay block protection:", err));
+            // JALUR EMERGENSI ADZAN: Jika masuk waktu adzan, bypass proteksi userStopped dan paksa langsung bunyi
+            if (isPlayingRef.current || isAdzanTime || isAutoSwitchingRef.current) {
+              if (!isInitialized.current) initAudio();
+              
+              audio.volume = 1;
+              audio.play()
+                .then(() => {
+                  setIsPlaying(true);
+                  setHasError(false);
+                  userStoppedRef.current = false;
+                  isAutoSwitchingRef.current = false;
+                })
+                .catch(err => console.warn("Autoplay block protection triggered on Adzan event:", err));
             }
           } else {
-            // JIKA AKAN MEMUTAR FILE STENGAH JALAN (CATCH UP TIMELINE AUDIO), TOLERANSI DIKETATKAN BILA LEBIH DARI 5 DETIK
+            // Sinkronisasi sinkronisasi toleransi detikan file audio reguler
             if (data.type !== "relay_stream" && data.elapsed_seconds && Math.abs(audio.currentTime - data.elapsed_seconds) > 5) {
               audio.currentTime = data.elapsed_seconds;
             }
@@ -302,11 +322,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       setMetadata({ title: "Hubungan Terputus...", artist: "Radio Suara Al Muttaqin", art: "/bg-player.png" });
       setListeners(0);
     }
-  }, [stopMp3Playback]);
+  }, [stopMp3Playback, initAudio]);
 
   useEffect(() => {
     fetchMetadata();
-    const interval = setInterval(fetchMetadata, 15000); // Polling metadata disetel per 15 detik sekali
+    const interval = setInterval(fetchMetadata, 15000); 
     return () => clearInterval(interval);
   }, [fetchMetadata]);
 
@@ -316,7 +336,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       if (audio && audio.src && audio.src !== "" && audio.src !== window.location.href) {
         audio.volume = 1;
         
-        // Memastikan Audio Context resume terlebih dahulu agar visualizer tidak beku
         if (audioContextRef.current && audioContextRef.current.state === "suspended") {
           await audioContextRef.current.resume();
         }
@@ -358,7 +377,6 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
   const toggleLivePlayback = useCallback(() => {
     if (isYouTubeLive && youtubeToggleRef.current) {
-      // Alihkan perintah play langsung ke fungsi internal pemutar YouTube tersembunyi Anda
       youtubeToggleRef.current();
       return;
     }
@@ -469,7 +487,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         preload="none"
         onPause={() => {
           if (!isAutoSwitchingRef.current && userStoppedRef.current && audioRef.current?.volume === 0) {
-            // Cegah interupsi crash di luar kontrol browser jemaah
+            // Proteksi sirkuit
           }
         }}
         onPlay={() => {

@@ -8,13 +8,25 @@ export const dynamic = "force-dynamic"; // Memaksa API selalu fresh tanpa membek
 export const revalidate = 0; // Mematikan optimasi cache statis Vercel secara total demi suara real-time
 
 // =================================================================
-// 1. KONFIGURASI JINGLE OTOMATIS
+// 1. KONFIGURASI INTERUPSI ADZAN JEPARA OTOMATIS
+// =================================================================
+const ADZAN_URL = "/audio/adzan.mp3";
+const ADZAN_DURATION_SECONDS = 180; // Estimasi rata-rata durasi file adzan.mp3 Anda (3 menit)
+
+// Koordinat Geografis Kabupaten Jepara, Jawa Tengah (Metode Kemenag / MABIMS)
+// Menggunakan API Aladhan dengan kalkulasi otomatis zona Asia/Jakarta
+const JEPARA_LATITUDE = -6.5891;
+const JEPARA_LONGITUDE = 110.6784;
+const METHOD_KEMENAG = 20; // Islamic Society of North America / Kemenag RI (Toleransi Selaras)
+
+// =================================================================
+// 2. KONFIGURASI JINGLE OTOMATIS
 // =================================================================
 const JINGLE_URL = "/audio/jingle.mp3";
 const JINGLE_DURATION = 15;
 
 // =================================================================
-// 2. DAFTAR AUDIO CADANGAN (FILLER)
+// 3. DAFTAR AUDIO CADANGAN (FILLER)
 // =================================================================
 const FILLER_PLAYLIST = [
   {
@@ -111,7 +123,7 @@ function getVirtualFillerTrack(gapSeconds: number) {
   };
 }
 
-// 🟢 HELPER HEADERS ANTI-BUFF: Memaksa HTTP response bebas sisa cache jaringan demi transmisi suara jernih
+// HELPER HEADERS ANTI-BUFF
 const getSecureHeaders = () => {
   return {
     "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
@@ -129,8 +141,79 @@ export async function GET() {
   try {
     const now = new Date();
 
+    // 1. Ekstraksi Waktu lokal Asia/Jakarta (WIB) yang antipeluru di Vercel Server
+    const timeFormatter = new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+
+    const timeParts = timeFormatter.formatToParts(now);
+    const currentHours = Number(timeParts.find(p => p.type === 'hour')?.value || 0);
+    const currentMinutes = Number(timeParts.find(p => p.type === 'minute')?.value || 0);
+    const currentSecs = Number(timeParts.find(p => p.type === 'second')?.value || 0);
+    
+    const currentTotalMinutes = currentHours * 60 + currentMinutes;
+
     // =================================================================
-    // 0. PRIORITAS UTAMA: DETEKSI JADWAL HYBRID + HARI DARI SANITY CMS
+    // 📿 KASTA TERTINGGI (KASTA 0): INTERUPSI ADZAN OTOMATIS WILAYAH JEPARA
+    // =================================================================
+    try {
+      const timestampUnix = Math.floor(now.getTime() / 1000);
+      // Panggil API Jadwal Sholat Terpercaya dengan koordinat presisi Jepara
+      const prayerRes = await fetch(
+        `https://api.aladhan.com/v1/timings/${timestampUnix}?latitude=${JEPARA_LATITUDE}&longitude=${JEPARA_LONGITUDE}&method=${METHOD_KEMENAG}`,
+        { next: { revalidate: 3600 } } // Cache jadwal sholat selama 1 jam saja agar hemat limit API
+      );
+      
+      if (prayerRes.ok) {
+        const prayerData = await prayerRes.json();
+        const timings = prayerData?.data?.timings;
+
+        if (timings) {
+          // Kita ambil 5 Waktu Sholat Wajib Utama
+          const jadwalSholatWajib = [
+            { nama: "Adzan Subuh", waktu: timings.Fajr },
+            { nama: "Adzan Dzuhur", waktu: timings.Dhuhr },
+            { nama: "Adzan Ashar", waktu: timings.Asr },
+            { nama: "Adzan Maghrib", waktu: timings.Maghrib },
+            { nama: "Adzan Isya", waktu: timings.Isya }
+          ];
+
+          for (const sholat of jadwalSholatWajib) {
+            const adzanStartMinutes = timeToMinutes(sholat.waktu);
+            const adzanEndMinutes = adzanStartMinutes + Math.ceil(ADZAN_DURATION_SECONDS / 60);
+
+            // Jika waktu server WIB saat ini berada di dalam jendela berkumandangnya Adzan Jepara
+            if (currentTotalMinutes >= adzanStartMinutes && currentTotalMinutes < adzanEndMinutes) {
+              const secondsElapsedFromAdzanStart = ((currentTotalMinutes - adzanStartMinutes) * 60) + currentSecs;
+
+              if (secondsElapsedFromAdzanStart < ADZAN_DURATION_SECONDS) {
+                return NextResponse.json({
+                  active: true,
+                  type: "playlist_mp3", // Dipaksa bertindak sebagai MP3 stream agar AudioContext jemaah memutar internal HTML5 Audio
+                  youtube_video_id: null,
+                  thumbnail: "/bg-player.png",
+                  title: `${sholat.nama} - Wilayah Jepara & Sekitarnya`,
+                  artist: "Pondok Pesantren Al Muttaqin Jepara",
+                  program_title: "Waktu Sholat Wajib",
+                  audio_url: ADZAN_URL,
+                  elapsed_seconds: secondsElapsedFromAdzanStart,
+                  allSchedules: []
+                }, { headers: getSecureHeaders() });
+              }
+            }
+          }
+        }
+      }
+    } catch (prayerError) {
+      console.error("Gagal mendeteksi sinkronisasi adzan otomatis Kemenag API:", prayerError);
+    }
+
+    // =================================================================
+    // 0. PRIORITAS KASTA 1: DETEKSI JADWAL HYBRID FROM SANITY CMS
     // =================================================================
     try {
       const sanityQuery = `
@@ -159,21 +242,6 @@ export async function GET() {
 
       if (config && config.schedules && Array.isArray(config.schedules)) {
         cachedSchedules = config.schedules;
-
-        const timeFormatter = new Intl.DateTimeFormat('id-ID', {
-          timeZone: 'Asia/Jakarta',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        });
-
-        const timeParts = timeFormatter.formatToParts(now);
-        const currentHours = Number(timeParts.find(p => p.type === 'hour')?.value || 0);
-        const currentMinutes = Number(timeParts.find(p => p.type === 'minute')?.value || 0);
-        const currentSecs = Number(timeParts.find(p => p.type === 'second')?.value || 0);
-        
-        const currentTotalMinutes = currentHours * 60 + currentMinutes;
 
         const dayFormatter = new Intl.DateTimeFormat('en-US', {
           timeZone: 'Asia/Jakarta',
@@ -204,7 +272,6 @@ export async function GET() {
           const secondsSinceScheduleStarted = ((currentTotalMinutes - startMinutes) * 60) + currentSecs;
           const ASSUMED_TRACK_DURATION = 3600; 
 
-          // --- 🎥 CASE A: MODE TRANSMISI YOUTUBE LIVE ---
           if (activeSchedule.broadcastMode === 'youtube_live') {
             const videoId = activeSchedule.youtubeVideoId?.trim() || null;
             return NextResponse.json({
@@ -221,7 +288,6 @@ export async function GET() {
             }, { headers: getSecureHeaders() });
           }
 
-          // --- 📻 CASE B: MODE TRANSMISI RELAY STREAM (RADIO FM LAIN) ---
           if (activeSchedule.broadcastMode === 'relay_stream') {
             const relayUrl = activeSchedule.relayAudioUrl?.trim() || null;
             return NextResponse.json({
@@ -238,7 +304,6 @@ export async function GET() {
             }, { headers: getSecureHeaders() });
           }
 
-          // --- 🎵 CASE C: MODE TRANSMISI PLAYLIST MP3 CLOUD ---
           if (activeSchedule.broadcastMode === 'playlist_mp3' && activeSchedule.playlist && activeSchedule.playlist.length > 0) {
             const totalPlaylistTracks = activeSchedule.playlist.length;
             const totalTrackIndexTimeline = Math.floor(secondsSinceScheduleStarted / ASSUMED_TRACK_DURATION);
